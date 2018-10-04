@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<package>
+  <name>dynamic_graph_manager</name>
+  <version>1.0.0</version>
+  <description>
+    This project implements a small example when using the dynamic graph
+  </description>
+  <author email="mnaveau@tue.mpg.de">Maximilien Naveau</author>
+  <maintainer email="mnaveau@tue.mpg.de">Maximilien Naveau</maintainer>
+  <license>TODO</license>
+  <buildtool_depend>catkin</buildtool_depend>
+
+<!-- Message dependencies -->
+  <build_depend>std_msgs</build_depend>
+  <run_depend>  std_msgs</run_depend>
+<!-- Generate messages and services -->
+  <build_depend>message_generation</build_depend>
+  <run_depend>  message_generation</run_depend>
+<!-- It is a C++ pacakge depending on ROS -->
+  <build_depend> roscpp </build_depend>
+  <run_depend>   roscpp </run_depend>
+<!-- Dynamic Graph dependency -->
+  <build_depend> dynamic_graph </build_depend>
+  <run_depend>   dynamic_graph </run_depend>
+<!-- Dynamic Graph python bindings and python interpreter -->
+  <build_depend> dynamic_graph_python </build_depend>
+  <run_depend>   dynamic_graph_python </run_depend>
+<!-- Use YAML files to parameterize the DynamicGraph device  -->
+  <build_depend> yaml_cpp </build_depend>
+  <run_depend>   yaml_cpp </run_depend>
+<!-- This tools provides shared memory object in an encapsulated way -->
+  <build_depend> shared_memory </build_depend>
+  <run_depend>   shared_memory </run_depend>
+<!-- This tools provides real time thread objects in an encapsulated way -->
+  <build_depend> real_time_tools </build_depend>
+  <run_depend>   real_time_tools </run_depend>
+<!-- Allow to use the tranform form ROS -->
+  <build_depend> tf2_bullet </build_depend>
+  <run_depend>   tf2_bullet </run_depend>
+<!--  <build_depend> pinocchio </build_depend>
+  <run_depend>   pinocchio </run_depend>
+  <build_depend> eigen </build_depend>
+  <run_depend>   eigen </run_depend>-->
+<!--  <build_depend> dynamic-graph-bridge </build_depend>
+  <run_depend>   dynamic-graph-bridge </run_depend>
+  <build_depend> dynamic-graph-bridge_msgs </build_depend>
+  <run_depend>   dynamic-graph-bridge_msgs </run_depend>-->
+
+</package>
