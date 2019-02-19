@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(dg_tools)
 
-# required to use std::shared_ptr in code
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+# required to use std::shared_ptr in code AND to link the DG plugins
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wl,--no-as-needed")
 
 # ensuring path to libraries are set during install
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
@@ -23,18 +23,12 @@ set(CATKIN_PKGS ${CATKIN_PKGS}
 )
 find_package(catkin REQUIRED COMPONENTS ${CATKIN_PKGS})
 
+search_for_eigen()
+search_for_python()
 
-add_required_dependency("yaml-cpp >= 0.5")
+# Trigger dependency to dynamic-graph.
 add_required_dependency("dynamic-graph >= 3.0.0")
 add_required_dependency("dynamic-graph-python >= 3.0.0")
-add_required_dependency("sot-core >= 3.0.0")
-# build_prefix_for_pkg("yaml-cpp" yaml_cpp_name) # only if in include_directories
-# build_prefix_for_pkg("dynamic-graph" dg_name)
-# build_prefix_for_pkg("dynamic-graph-python" dgp_name)
-
-# SEARCH_FOR_PYTHON()
-# SEARCH_FOR_BOOST()
-SEARCH_FOR_EIGEN()
 
 ####################################
 # Define the OS to be used locally #
@@ -42,7 +36,7 @@ SEARCH_FOR_EIGEN()
 
 # This macro sets the C++ preprocessor flags "XENOMAI", "RT_PREEMPT", or
 # "UBUNTU" according to the current operating system.
-DEFINE_OS()
+define_os()
 
 ######################################################
 # define the include directory of all ${CATKIN_PKGS} #
@@ -50,26 +44,7 @@ DEFINE_OS()
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${catkin_INCLUDE_DIRS}
-
-    # ${${yaml_cpp_name}_INCLUDE_DIRS}
-    # ${${dg_name}_INCLUDE_DIRS}
-    # ${${dgp_name}_INCLUDE_DIRS}    
-        
-    # ${PYTHON_INCLUDE_PATH}
-    # ${Boost_INCLUDE_DIR}
-    ${Eigen_INCLUDE_DIRS}
 )
-
-##############################
-# manage python file install #
-##############################
-# catkin_python_setup()
-# INSTALL_PYTHON_FILES("" "python/dynamic_graph_manager")
-
-#####################################################################
-# Actually generate the language-specific message and service files #
-#####################################################################
-# generate_messages(DEPENDENCIES std_msgs)
 
 ########################################################
 # manage the creation of the libraries and executables #
@@ -82,7 +57,6 @@ add_subdirectory(src)
 catkin_package(
   LIBRARIES ${EXPORTED_LIBRAIRIES}
   INCLUDE_DIRS include
-  CATKIN_DEPENDS ${CATKIN_PKGS}
 )
 
 #########################
@@ -94,6 +68,7 @@ add_subdirectory(tests)
 # manage the demos #
 ####################
 add_subdirectory(demos)
+
 
 ##########################
 # building documentation #
@@ -113,21 +88,4 @@ if(BUILD_DOCUMENTATION)
   add_custom_target (${PROJECT_NAME}_doc ALL
     COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
     SOURCES ${PROJECT_BINARY_DIR}/Doxyfile)
-endif()
-
-###############################################
-# Add custom (non compiling) targets          #
-# so non cpp files show up in QT_CREATOR IDE. #
-###############################################
-set(USE_QTCREATOR_${PROJECT_NAME} OFF CACHE BOOL
-    "Set to ON if you want QtCreator to display all files in the project tree")
-if(USE_QTCREATOR_${PROJECT_NAME})
-    file(GLOB_RECURSE EXTRA_FILES
-        ../*.h ../*.hh ../*.hpp ../*.py
-        ../*.cf  ../*.yaml ../*.txt ../*.xml
-        ../start ../*.launch ../*.urdf ../CATKIN_IGNORE ../*.in
-    )
-    #list(FILTER EXTRA_FILES EXCLUDE REGEX "build")
-    add_custom_target(${PROJECT_NAME}_OTHER_FILES ALL WORKING_DIRECTORY
-        ${PROJECT_SOURCE_DIR} SOURCES ${EXTRA_FILES})
 endif()

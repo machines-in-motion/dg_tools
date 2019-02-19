@@ -19,7 +19,7 @@
  */
 
 /* SOT */
-#include <dg_tools/control/control_pd.hh>
+#include "dg_tools/control/control_pd.hpp"
 
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
@@ -30,7 +30,7 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControlPD,"ControlPD");
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControlPD, "ControlPD");
 
 const double ControlPD::
 TIME_STEP_DEFAULT = .001;
@@ -42,8 +42,7 @@ TIME_STEP_DEFAULT = .001;
 
 #define __SOT_ControlPD_INIT \
 
-ControlPD::
-ControlPD( const std::string & name )
+ControlPD::ControlPD( const std::string & name )
  :Entity(name)
  ,TimeStep(0)
  ,KpSIN(NULL,"ControlPD("+name+")::input(vector)::Kp")
@@ -74,8 +73,7 @@ init(const double& Stept)
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-void ControlPD::
-display( std::ostream& os ) const
+void ControlPD::display( std::ostream& os ) const
 {
   os << "ControlPD "<<getName();
   try{
@@ -93,7 +91,7 @@ double& ControlPD::setsize(int dimension)
 
 {
   _dimension = dimension;
-        return _dimension;
+  return _dimension;
 }
 
 dynamicgraph::Vector& ControlPD::
