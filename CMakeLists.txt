@@ -19,21 +19,22 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 ############################
 
 set(CATKIN_PKGS ${CATKIN_PKGS}
-    message_generation
-    roscpp
-    dynamic_graph
-    dynamic_graph_python
-    yaml_cpp
-    shared_memory
-    real_time_tools
-    tf2_bullet
+    mpi_cmake_modules
 )
 find_package(catkin REQUIRED COMPONENTS ${CATKIN_PKGS})
 
-SEARCH_FOR_PYTHON()
-SEARCH_FOR_BOOST()
-SEARCH_FOR_EIGEN()
 
+add_required_dependency("yaml-cpp >= 0.5")
+add_required_dependency("dynamic-graph >= 3.0.0")
+add_required_dependency("dynamic-graph-python >= 3.0.0")
+add_required_dependency("sot-core >= 3.0.0")
+# build_prefix_for_pkg("yaml-cpp" yaml_cpp_name) # only if in include_directories
+# build_prefix_for_pkg("dynamic-graph" dg_name)
+# build_prefix_for_pkg("dynamic-graph-python" dgp_name)
+
+# SEARCH_FOR_PYTHON()
+# SEARCH_FOR_BOOST()
+SEARCH_FOR_EIGEN()
 
 ####################################
 # Define the OS to be used locally #
@@ -49,42 +50,40 @@ DEFINE_OS()
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${catkin_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_PATH}
-    ${Boost_INCLUDE_DIR}
+
+    # ${${yaml_cpp_name}_INCLUDE_DIRS}
+    # ${${dg_name}_INCLUDE_DIRS}
+    # ${${dgp_name}_INCLUDE_DIRS}    
+        
+    # ${PYTHON_INCLUDE_PATH}
+    # ${Boost_INCLUDE_DIR}
     ${Eigen_INCLUDE_DIRS}
-)
-
-#########################################
-# Declare the service files to be built #
-#########################################
-add_service_files(FILES
-  RunCommand.srv
-  RunPythonFile.srv
-)
-
-#########################################
-# Declare the message files to be built #
-#########################################
-add_message_files(FILES
-  Matrix.msg
-  Vector.msg
 )
 
 ##############################
 # manage python file install #
 ##############################
-catkin_python_setup()
-INSTALL_PYTHON_FILES("" "python/dynamic_graph_manager")
+# catkin_python_setup()
+# INSTALL_PYTHON_FILES("" "python/dynamic_graph_manager")
 
 #####################################################################
 # Actually generate the language-specific message and service files #
 #####################################################################
-generate_messages(DEPENDENCIES std_msgs)
+# generate_messages(DEPENDENCIES std_msgs)
 
 ########################################################
 # manage the creation of the libraries and executables #
 ########################################################
 add_subdirectory(src)
+
+##########################################
+# export the package as a catkin package #
+##########################################
+catkin_package(
+  LIBRARIES ${EXPORTED_LIBRAIRIES}
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS ${CATKIN_PKGS}
+)
 
 #########################
 # manage the unit tests #
@@ -95,15 +94,6 @@ add_subdirectory(tests)
 # manage the demos #
 ####################
 add_subdirectory(demos)
-
-##########################################
-# export the package as a catkin package #
-##########################################
-catkin_package(
-  LIBRARIES ${EXPORTED_LIBRAIRIES}
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS ${CATKIN_PKGS}
-)
 
 ##########################
 # building documentation #
