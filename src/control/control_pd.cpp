@@ -30,7 +30,7 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControlPD, "ControlPD");
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControlPD, "PDController");
 
 const double ControlPD::
 TIME_STEP_DEFAULT = .001;
