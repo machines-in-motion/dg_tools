@@ -55,14 +55,17 @@ ControlPD::ControlPD( const std::string & name )
          KpSIN << KdSIN << positionSIN << desiredpositionSIN
          << velocitySIN << desiredvelocitySIN,
         "ControlPD("+name+")::output(vector)::control" )
+  ,positionErrorSOUT(boost::bind(&ControlPD::computeControl,this,_1,_2),
+        controlSOUT,
+        "ControlPD("+name+")::output(vector)::position_error")
   ,velocityErrorSOUT(boost::bind(&ControlPD::computeControl,this,_1,_2),
-         controlSOUT,
-         "ControlPD("+name+")::output(vector)::velocity_error")
+        controlSOUT,
+        "ControlPD("+name+")::output(vector)::velocity_error")
 {
   init(TimeStep);
   Entity::signalRegistration( KpSIN << KdSIN << positionSIN << 
-    desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT <<
-    velocityErrorSOUT );
+    desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT 
+    << positionErrorSOUT << velocityErrorSOUT );
 }
 
 void ControlPD::
@@ -105,24 +108,22 @@ computeControl( dynamicgraph::Vector &tau, int t )
   const dynamicgraph::Vector& Kp = KpSIN(t);
   const dynamicgraph::Vector& Kd = KdSIN(t);      
   const dynamicgraph::Vector& position = positionSIN(t);
-  const dynamicgraph::Vector& desiredposition = desiredpositionSIN(t);
+  const dynamicgraph::Vector& desired_position = desiredpositionSIN(t);
   const dynamicgraph::Vector& velocity = velocitySIN(t);      
-  const dynamicgraph::Vector& desiredvelocity = desiredvelocitySIN(t);
+  const dynamicgraph::Vector& desired_velocity = desiredvelocitySIN(t);
       
   dynamicgraph::Vector::Index size = Kp.size();   
   tau.resize(size);
-  positionError.resize(size);
-  velocityError.resize(size);
+  position_error.resize(size);
+  velocity_error.resize(size);
 
-  positionError.array() = desiredposition.array()-position.array();  
-  velocityError.array() = desiredvelocity.array()-velocity.array();
+  position_error.array() = desired_position.array()-position.array();  
+  velocity_error.array() = desired_velocity.array()-velocity.array();
 
-  tau.array() = positionError.array()*Kp.array() 
-              + velocityError.array()*Kd.array();
+  tau.array() = position_error.array()*Kp.array() 
+              + velocity_error.array()*Kd.array();
   
   sotDEBUGOUT(15);
- // std::cout << " tau " << tau << std::endl;
- // std::cout << "velocity " << velocity << std::endl;
   return tau;
 
 }
@@ -130,16 +131,16 @@ computeControl( dynamicgraph::Vector &tau, int t )
 
 
 dynamicgraph::Vector& ControlPD::
-getPositionError( dynamicgraph::Vector &positionError, int t)
+getPositionError( dynamicgraph::Vector &position_error, int t)
 {
   //sotDEBUGOUT(15) ??
   controlSOUT(t);
-  return positionError;
+  return position_error;
 }
 
 dynamicgraph::Vector& ControlPD::
-getVelocityError( dynamicgraph::Vector &velocityError, int t)
+getVelocityError( dynamicgraph::Vector &velocity_error, int t)
 {
   controlSOUT(t);
-  return velocityError;
+  return velocity_error;
 }

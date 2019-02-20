@@ -102,10 +102,10 @@ namespace dynamicgraph {
 
       double& setsize(int dimension);
       dg::Vector& computeControl( dg::Vector& tau,int t );
-      dg::Vector positionError;
-      dg::Vector velocityError;
-      dg::Vector& getPositionError( dg::Vector& positionError,int t );
-      dg::Vector& getVelocityError( dg::Vector& velocityError,int t );
+      dg::Vector position_error;
+      dg::Vector velocity_error;
+      dg::Vector& getPositionError( dg::Vector& position_error,int t );
+      dg::Vector& getVelocityError( dg::Vector& velocity_error,int t );
 
     };
 
