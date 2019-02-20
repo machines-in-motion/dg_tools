@@ -95,8 +95,8 @@ namespace dynamicgraph {
       SignalPtr<dg::Vector,int> velocitySIN;
       SignalPtr<dg::Vector,int> desiredvelocitySIN;
       SignalTimeDependent<dg::Vector,int> controlSOUT;
-      // SignalTimeDependent<dg::Vector,int> positionErrorSOUT;
-      // SignalTimeDependent<dg::Vector,int> velocityErrorSOUT;
+      SignalTimeDependent<dg::Vector,int> positionErrorSOUT;
+      SignalTimeDependent<dg::Vector,int> velocityErrorSOUT;
 
     protected:
 
@@ -104,8 +104,8 @@ namespace dynamicgraph {
       dg::Vector& computeControl( dg::Vector& tau,int t );
       dg::Vector positionError;
       dg::Vector velocityError;
-      // dg::Vector& getPositionError( dg::Vector& positionError,int t );
-      // dg::Vector& getVelocityError( dg::Vector& velocityError,int t );
+      dg::Vector& getPositionError( dg::Vector& positionError,int t );
+      dg::Vector& getVelocityError( dg::Vector& velocityError,int t );
 
     };
 

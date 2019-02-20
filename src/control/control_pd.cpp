@@ -125,3 +125,17 @@ computeControl( dynamicgraph::Vector &tau, int t )
 
 
 
+dynamicgraph::Vector& ControlPD::
+getPositionError( dynamicgraph::Vector &positionError, int t)
+{
+  // sotDEBUGOUT(15) ??
+  controlSOUT.recompute(t);
+  return positionError;
+}
+
+dynamicgraph::Vector& ControlPD::
+getVelocityError( dynamicgraph::Vector &velocityError, int t)
+{
+  controlSOUT.recompute(t);
+  return velocityError;
+}
