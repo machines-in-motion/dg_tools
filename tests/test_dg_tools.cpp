@@ -1,12 +1,12 @@
 /**
  * @file test_dg_tools.cpp
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2019-02-19
- * 
+ *
  * @copyright Copyright (c) 2019
- * 
+ *
  */
 
 #include <gtest/gtest.h>
@@ -43,8 +43,8 @@ protected:
  */
 TEST_F(TestDGTools, test_control_pd_constructor)
 {
-  dynamicgraph::sot::ControlPD pd("a_pd_control");
-  ASSERT_EQ("ControlPD", pd.CLASS_NAME);
-  ASSERT_EQ("ControlPD", pd.getClassName());
-  ASSERT_EQ("a_pd_control", pd.getName());
+  dynamicgraph::sot::ControlPD pd("a_pd_controller");
+  ASSERT_EQ("PDController", pd.CLASS_NAME);
+  ASSERT_EQ("PDController", pd.getClassName());
+  ASSERT_EQ("a_pd_controller", pd.getName());
 }
