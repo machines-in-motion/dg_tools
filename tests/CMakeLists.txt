@@ -27,6 +27,6 @@ create_dg_tools_unittest(dg_tools)
 
 # Setup python / nosetests
 
-# if (CATKIN_ENABLE_TESTING)
-#   catkin_add_nosetests(.)
-# endif()
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(.)
+endif()

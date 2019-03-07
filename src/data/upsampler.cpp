@@ -10,6 +10,7 @@
 /* --------------------------------------------------------------------- */
 #include <sot/core/debug.hh>
 #include <dynamic-graph/factory.h>
+#include <dynamic-graph/all-commands.h>
 
 using namespace dg_tools;
 
@@ -29,6 +30,17 @@ Upsampler::Upsampler( const std::string & name )
         "Upsampler("+name+")::output(vector)::sout" )
 {
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
+
+  addCommand (
+    "init",
+    dynamicgraph::command::makeCommandVoid1(
+      *this,
+      &Upsampler::init,
+      dynamicgraph::command::docCommandVoid1(
+          "Init the upsampler",
+          "int: upsampling factor (how often to repeat the previous input signal)")
+    )
+  );
 }
 
 void Upsampler::init(const int& upsampling_factor)

@@ -55,7 +55,6 @@ namespace dg_tools {
       void init(const int& upsampling_factor);
 
       static const std::string CLASS_NAME;
-      virtual void display( std::ostream& os ) const;
       virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
 
       dg::SignalPtr<dg::Vector,int> data_inputSIN;

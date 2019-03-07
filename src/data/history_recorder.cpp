@@ -41,6 +41,12 @@ void HistoryRecorder::init(const int& history_length)
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
+void HistoryRecorder::display( std::ostream& os ) const
+{
+  os << "HistoryRecorder " << getName();
+  os <<" (" << history_length_ << ") ";
+}
+
 dg::Vector& HistoryRecorder::getHistory( dg::Vector& history, int time)
 {
   const dg::Vector& input = dataSIN(time);
