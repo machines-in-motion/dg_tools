@@ -8,8 +8,12 @@
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
+
+#include <iostream>
+
 #include <sot/core/debug.hh>
 #include <dynamic-graph/factory.h>
+#include <dynamic-graph/all-commands.h>
 
 using namespace dg_tools;
 
@@ -29,6 +33,17 @@ HistoryRecorder::HistoryRecorder( const std::string & name )
         "HistoryRecorder("+name+")::output(vector)::sout" )
 {
   Entity::signalRegistration(dataSIN << historySOUT);
+
+  addCommand (
+    "init",
+    dynamicgraph::command::makeCommandVoid1(
+      *this,
+      &HistoryRecorder::init,
+      dynamicgraph::command::docCommandVoid1(
+          "Init the history recorder",
+          "int: Length of history to keep")
+    )
+  );
 }
 
 void HistoryRecorder::init(const int& history_length)
@@ -54,8 +69,9 @@ dg::Vector& HistoryRecorder::getHistory( dg::Vector& history, int time)
   if (!is_initialized_) {
     is_initialized_ = true;
 
-    // Allocate the result vector based on the input size.
-    internal_history_.resize(history_length_, input.size());
+    // Allocate the result vector based on the input size. Note that
+    // the dg::Matrix stores data in column-first order.
+    internal_history_.resize(input.size(), history_length_);
 
     // Fill the history with the first input data.
     for (int i = 0; i < history_length_; i++) {
@@ -69,7 +85,7 @@ dg::Vector& HistoryRecorder::getHistory( dg::Vector& history, int time)
   }
 
   // Put the new data at the end of the internal history.
-  internal_history_.rightCols(1) = input;
+  internal_history_.col(history_length_ - 1) = input;
 
   // The new Eigen::Matrix.reshaped API is not available in the Eigen version
   // we use.
