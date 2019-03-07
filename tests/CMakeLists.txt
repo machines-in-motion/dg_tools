@@ -24,3 +24,9 @@ target_compile_definitions(test_${test_name} PUBLIC
 endmacro(create_dg_tools_unittest test_name)
 
 create_dg_tools_unittest(dg_tools)
+
+# Setup python / nosetests
+
+# if (CATKIN_ENABLE_TESTING)
+#   catkin_add_nosetests(.)
+# endif()
