@@ -9,6 +9,8 @@ set(cpp_source_files
   control/control_pd.cpp
   data/history_recorder.cpp
   data/upsampler.cpp
+  data/previous_value.cpp
+  data/memory_replay.cpp
 )
 
 add_library(${lib_name} SHARED ${cpp_source_files})
