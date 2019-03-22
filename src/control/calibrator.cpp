@@ -44,7 +44,7 @@ TIME_STEP_DEFAULT = .001;
 
 Calibrator::Calibrator( const std::string & name )
  :Entity(name)
- ,positionSIN(NULL,"Calibrator("+name+")::input(vector)::position")
+ ,positionSIN(NULL,"Calibrator("+name+")::input(vector)::raw_position")
  ,velocitySIN(NULL,"Calibrator("+name+")::input(vector)::velocity")
  ,desiredVelocitySIN(NULL,
               "Calibrator("+name+")::input(vector)::desiredVelocity")
@@ -52,7 +52,7 @@ Calibrator::Calibrator( const std::string & name )
  ,hardstop2zeroSIN(NULL,"Calibrator("+name+")::input(vector)::hardstop2zero")
  ,positionSOUT( boost::bind(&Calibrator::compute_position,this,_1,_2),
          positionSIN << hardstop2zeroSIN,
-        "Calibrator("+name+")::output(vector)::position" )
+        "Calibrator("+name+")::output(vector)::calibrated_position" )
  ,controlSOUT( boost::bind(&Calibrator::calibrate,this,_1,_2),
  kpSIN << positionSIN << velocitySIN << desiredVelocitySIN,
  "Calibrator("+name+")::output(vector)::control" )
