@@ -30,6 +30,9 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 
+#include <iostream>
+using namespace std;
+
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Calibrator, "Calibrator");
 
 const double Calibrator::
@@ -44,7 +47,7 @@ TIME_STEP_DEFAULT = .001;
 
 Calibrator::Calibrator( const std::string & name )
  :Entity(name)
- ,positionSIN(NULL,"Calibrator("+name+")::input(vector)::raw_position")
+ ,positionSIN(NULL,"Calibrator("+name+")::input(vector)::rawPosition")
  ,velocitySIN(NULL,"Calibrator("+name+")::input(vector)::velocity")
  ,desiredVelocitySIN(NULL,
               "Calibrator("+name+")::input(vector)::desiredVelocity")
@@ -52,7 +55,7 @@ Calibrator::Calibrator( const std::string & name )
  ,hardstop2zeroSIN(NULL,"Calibrator("+name+")::input(vector)::hardstop2zero")
  ,positionSOUT( boost::bind(&Calibrator::compute_position,this,_1,_2),
          positionSIN << hardstop2zeroSIN,
-        "Calibrator("+name+")::output(vector)::calibrated_position" )
+        "Calibrator("+name+")::output(vector)::calibratedPosition" )
  ,controlSOUT( boost::bind(&Calibrator::calibrate,this,_1,_2),
  kpSIN << positionSIN << velocitySIN << desiredVelocitySIN,
  "Calibrator("+name+")::output(vector)::control" )
@@ -61,8 +64,8 @@ Calibrator::Calibrator( const std::string & name )
 //  ,
 //  "Calibrator("+name+")::output(vector)::control" )
 {
-  Entity::signalRegistration( kpSIN << positionSIN << velocitySIN << 
-                              desiredVelocitySIN << controlSOUT);
+  Entity::signalRegistration( positionSIN << velocitySIN << desiredVelocitySIN 
+                  << kpSIN << hardstop2zeroSIN << positionSOUT << controlSOUT);
 }
 
 /* --------------------------------------------------------------------- */
@@ -101,12 +104,15 @@ dynamicgraph::Vector& Calibrator::calibrate( dynamicgraph::Vector &tau, int t )
   const dynamicgraph::Vector& desiredVelocity = desiredVelocitySIN(t);
   const dynamicgraph::Vector& kp = kpSIN(t);
 
+  // TODO: tau should be a class member, the following should be in the init blk
+  numJoints = position.size();
+  tau.resize(numJoints); tau.setZero();
   if(initFlag){   
-    numJoints = position.size();
+    
     tStart = t;
-    tau.resize(numJoints); tau.setZero();
     error.resize(numJoints); error.setZero();
     isCalibrated.resize(numJoints); isCalibrated.setZero();
+    start2hardstop.resize(numJoints); start2hardstop.setZero();
 
     initFlag = 0;
   }
@@ -115,6 +121,7 @@ dynamicgraph::Vector& Calibrator::calibrate( dynamicgraph::Vector &tau, int t )
   error = desiredVelocity.array().min(
           desiredVelocity.array()/500*(t-tStart)).array() 
             - velocity.array();
+  // error = desiredVelocity.array()-velocity.array();
 
   for(int idx = 0; idx < numJoints; idx++){
     if(!isCalibrated[idx]){
@@ -146,6 +153,10 @@ compute_position(dynamicgraph::Vector &calibratedPosition, int t)
     const dynamicgraph::Vector &hardstop2zero = hardstop2zeroSIN(t);
 
     calibratedPosition.resize(position.size());
+    if(start2hardstop.size() == 0){ // calibration has not yet happened!
+      start2hardstop.resize(position.size());
+      start2hardstop.setZero();
+    }
 
     calibratedPosition.array() = position.array() - start2hardstop.array()
                                  + hardstop2zero.array();
