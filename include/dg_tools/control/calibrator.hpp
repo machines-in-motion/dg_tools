@@ -89,27 +89,23 @@ namespace dynamicgraph {
     public:  /* --- SIGNALS --- */
       SignalPtr<dg::Vector, int> positionSIN;
       SignalPtr<dg::Vector, int> velocitySIN;
-
       SignalPtr<dg::Vector, int> desiredVelocitySIN;
-      SignalPtr<dg::Vector,int> KpSIN;
-
+      SignalPtr<dg::Vector,int> kpSIN;
       // this should be the offset that brings your legs to 0 configuration
       SignalPtr<dg::Vector, int> hardstop2zeroSIN;
       
 
       // OUTPUT SIGNALS
       SignalTimeDependent<dg::Vector, int> positionSOUT;
-      // SignalTimeDependent<dg::Vector, int> velocitySOUT;
-      // SignalTimeDependent<dg::Vector, int> calibratedFlagSOUT;
       // Only used during calibration part
       SignalTimeDependent<dg::Vector,int> controlSOUT;
-    //   SignalTimeDependent<dg::Vector,int> positionErrorSOUT;
-    //   SignalTimeDependent<dg::Vector,int> velocityErrorSOUT;
 
     protected:
 
       double& setsize(int dimension);
-      
+      int tStart;
+      int initFlag;
+      int numJoints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
       // dg::Bool& get_flag( dg::Bool& flag, int t);

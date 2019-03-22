@@ -44,36 +44,25 @@ TIME_STEP_DEFAULT = .001;
 
 Calibrator::Calibrator( const std::string & name )
  :Entity(name)
- ,TimeStep(0)
  ,positionSIN(NULL,"Calibrator("+name+")::input(vector)::position")
  ,velocitySIN(NULL,"Calibrator("+name+")::input(vector)::velocity")
- ,desiredVelocitySIN(NULL,"Calibrator("+name+")::input(vector)::desiredVelocity")
- ,KpSIN(NULL,"Calibrator("+name+")::input(vector)::Kp")
+ ,desiredVelocitySIN(NULL,
+              "Calibrator("+name+")::input(vector)::desiredVelocity")
+ ,kpSIN(NULL,"Calibrator("+name+")::input(vector)::kp")
  ,hardstop2zeroSIN(NULL,"Calibrator("+name+")::input(vector)::hardstop2zero")
  ,positionSOUT( boost::bind(&Calibrator::compute_position,this,_1,_2),
          positionSIN << hardstop2zeroSIN,
         "Calibrator("+name+")::output(vector)::position" )
  ,controlSOUT( boost::bind(&Calibrator::calibrate,this,_1,_2),
- KpSIN << positionSIN << velocitySIN << desiredVelocitySIN,
+ kpSIN << positionSIN << velocitySIN << desiredVelocitySIN,
  "Calibrator("+name+")::output(vector)::control" )
+ ,initFlag(1)
 //  calibratedFlagSOUT( boost::bind(&Calibrator::get_flag,this,_1,_2),
 //  ,
 //  "Calibrator("+name+")::output(vector)::control" )
 {
-  init(TimeStep);
-  Entity::signalRegistration( KpSIN << positionSIN << velocitySIN << 
+  Entity::signalRegistration( kpSIN << positionSIN << velocitySIN << 
                               desiredVelocitySIN << controlSOUT);
-}
-
-void Calibrator::init(const double& Stept)
-{
-  TimeStep = Stept;
-  const dynamicgraph::Vector& position = positionSIN(TimeStep); // I can't actually do this...
-  isCalibrated.resize(position.size());
-  isCalibrated.setZero();
-  // desVel.resize(position.size());
-  // desVel.setZero();
-  return;
 }
 
 /* --------------------------------------------------------------------- */
@@ -110,25 +99,28 @@ dynamicgraph::Vector& Calibrator::calibrate( dynamicgraph::Vector &tau, int t )
   const dynamicgraph::Vector& position = positionSIN(t);
   const dynamicgraph::Vector& velocity = velocitySIN(t);
   const dynamicgraph::Vector& desiredVelocity = desiredVelocitySIN(t);
-  const dynamicgraph::Vector& Kp = KpSIN(t);
+  const dynamicgraph::Vector& kp = kpSIN(t);
 
+  if(initFlag){   
+    numJoints = position.size();
+    tStart = t;
+    tau.resize(numJoints); tau.setZero();
+    error.resize(numJoints); error.setZero();
+    isCalibrated.resize(numJoints); isCalibrated.setZero();
 
-//   const dynamicgraph::Vector& hardstop2zero = hardstop2zeroSIN(t);
-
-  dynamicgraph::Vector::Index size = Kp.size();   
-  tau.resize(size);
-  error.resize(size);
-
+    initFlag = 0;
+  }
   // hacky ramp. at 1 khz, this sould ramp up in half a second
-  // ACK: this assumes calibrator always starts at t = 0!
   // TODO: use the initialized time
-  error = desiredVelocity.min(desiredVelocity.array()/500*t).array() 
+  error = desiredVelocity.array().min(
+          desiredVelocity.array()/500*(t-tStart)).array() 
             - velocity.array();
-  for(int idx = 0; idx < size; idx++){
+
+  for(int idx = 0; idx < numJoints; idx++){
     if(!isCalibrated[idx]){
-        tau[idx] = Kp[idx]*error[idx];
+        tau[idx] = kp[idx]*error[idx];
     } else {
-        tau.setZero(); // turn motors off after calibration is finished
+        tau[idx]=0; // turn motors off after calibration is finished
     }
 
     // check if we've saturated on error. If yes, save position and flip flag
@@ -138,8 +130,6 @@ dynamicgraph::Vector& Calibrator::calibrate( dynamicgraph::Vector &tau, int t )
     }
   }
 
-  // if velocity is 0, save current position to h2z and flip isCalibrated
-  
   // if all joints are calibrated, yay.
   
   sotDEBUGOUT(15);
@@ -155,10 +145,8 @@ compute_position(dynamicgraph::Vector &calibratedPosition, int t)
     const dynamicgraph::Vector &position = positionSIN(t);
     const dynamicgraph::Vector &hardstop2zero = hardstop2zeroSIN(t);
 
-    // TODO: this should be done at initialization, not during runtime
-    dynamicgraph::Vector::Index size = position.size();
+    calibratedPosition.resize(position.size());
 
-    calibratedPosition.resize(size);
     calibratedPosition.array() = position.array() - start2hardstop.array()
                                  + hardstop2zero.array();
 
