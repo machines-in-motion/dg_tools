@@ -66,8 +66,6 @@ namespace dynamicgraph {
 
     public: /* --- INIT --- */
 
-      void init( const double& step);
-
     public: /* --- CONSTANTS --- */
 
       /* Default values. */

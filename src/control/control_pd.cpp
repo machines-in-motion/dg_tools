@@ -62,18 +62,9 @@ ControlPD::ControlPD( const std::string & name )
         controlSOUT,
         "ControlPD("+name+")::output(vector)::velocity_error")
 {
-  init(TimeStep);
   Entity::signalRegistration( KpSIN << KdSIN << positionSIN << 
     desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT 
     << positionErrorSOUT << velocityErrorSOUT );
-}
-
-void ControlPD::
-init(const double& Stept)
-{
-  TimeStep = Stept;
-
-  return;
 }
 
 /* --------------------------------------------------------------------- */
