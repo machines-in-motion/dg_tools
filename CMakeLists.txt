@@ -46,6 +46,8 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
 )
 
+catkin_python_setup()
+
 ########################################################
 # manage the creation of the libraries and executables #
 ########################################################

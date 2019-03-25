@@ -7,8 +7,11 @@ set(lib_name dg_tools)
 # NOTE: in sot-core, these are set as plugins.
 set(cpp_source_files
   control/control_pd.cpp
+  control/calibrator.cpp
   data/history_recorder.cpp
   data/upsampler.cpp
+  data/previous_value.cpp
+  data/memory_replay.cpp
 )
 
 add_library(${lib_name} SHARED ${cpp_source_files})
