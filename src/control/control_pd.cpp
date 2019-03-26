@@ -62,8 +62,8 @@ ControlPD::ControlPD( const std::string & name )
         controlSOUT,
         "ControlPD("+name+")::output(vector)::velocity_error")
 {
-  Entity::signalRegistration( KpSIN << KdSIN << positionSIN << 
-    desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT 
+  Entity::signalRegistration( KpSIN << KdSIN << positionSIN <<
+    desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT
     << positionErrorSOUT << velocityErrorSOUT );
 }
 
@@ -75,7 +75,7 @@ void ControlPD::display( std::ostream& os ) const
 {
   os << "ControlPD "<<getName();
   try{
-    os <<"control = "<<controlSOUT; 
+    os <<"control = "<<controlSOUT;
   }
   catch (ExceptionSignal e) {}
   os <<" ("<<TimeStep<<") ";
@@ -93,27 +93,27 @@ double& ControlPD::setsize(int dimension)
 }
 
 dynamicgraph::Vector& ControlPD::
-computeControl( dynamicgraph::Vector &tau, int t ) 
+computeControl( dynamicgraph::Vector &tau, int t )
 {
-  sotDEBUGIN(15);     
+  sotDEBUGIN(15);
   const dynamicgraph::Vector& Kp = KpSIN(t);
-  const dynamicgraph::Vector& Kd = KdSIN(t);      
+  const dynamicgraph::Vector& Kd = KdSIN(t);
   const dynamicgraph::Vector& position = positionSIN(t);
   const dynamicgraph::Vector& desired_position = desiredpositionSIN(t);
-  const dynamicgraph::Vector& velocity = velocitySIN(t);      
+  const dynamicgraph::Vector& velocity = velocitySIN(t);
   const dynamicgraph::Vector& desired_velocity = desiredvelocitySIN(t);
       
-  dynamicgraph::Vector::Index size = Kp.size();   
+  dynamicgraph::Vector::Index size = Kp.size();
   tau.resize(size);
   position_error.resize(size);
   velocity_error.resize(size);
 
-  position_error.array() = desired_position.array()-position.array();  
+  position_error.array() = desired_position.array()-position.array();
   velocity_error.array() = desired_velocity.array()-velocity.array();
 
-  tau.array() = position_error.array()*Kp.array() 
+  tau.array() = position_error.array()*Kp.array()
               + velocity_error.array()*Kd.array();
-  
+
   sotDEBUGOUT(15);
   return tau;
 

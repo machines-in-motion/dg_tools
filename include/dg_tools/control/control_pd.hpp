@@ -39,12 +39,12 @@ namespace dg = dynamicgraph;
 /* --- API ------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-#if defined (WIN32) 
+#if defined (WIN32)
 #  if defined (control_pd_EXPORTS)
 #    define ControlPD_EXPORT __declspec(dllexport)
-#  else  
+#  else
 #    define ControlPD_EXPORT  __declspec(dllimport)
-#  endif 
+#  endif
 #else
 #  define ControlPD_EXPORT
 #endif
@@ -73,13 +73,13 @@ namespace dynamicgraph {
 
     public: /* --- ENTITY INHERITANCE --- */
       static const std::string CLASS_NAME;
-      virtual void display( std::ostream& os ) const; 
+      virtual void display( std::ostream& os ) const;
       virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
 
 
-    protected: 
-  
-      /* Parameters of the torque-control function: 
+    protected:
+
+      /* Parameters of the torque-control function:
        * tau = kp * (qd-q) + kd* (dqd-dq) */
       double TimeStep;
       double _dimension;
@@ -95,6 +95,8 @@ namespace dynamicgraph {
       SignalTimeDependent<dg::Vector,int> controlSOUT;
       SignalTimeDependent<dg::Vector,int> positionErrorSOUT;
       SignalTimeDependent<dg::Vector,int> velocityErrorSOUT;
+
+
 
     protected:
 
