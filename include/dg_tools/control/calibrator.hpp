@@ -1,7 +1,6 @@
 /*
  * Copyright 2010,
- * François Bleibel,
- * Olivier Stasse,
+ * Steve Heim
  *
  * CNRS/AIST
  *
@@ -72,13 +71,12 @@ namespace dynamicgraph {
     public: /* --- ENTITY INHERITANCE --- */
       static const std::string CLASS_NAME;
       virtual void display( std::ostream& os ) const; 
-      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+      virtual const std::string& getClassName( void ) const 
+              {return CLASS_NAME;}
 
 
     protected: 
   
-      /* Parameters of the torque-control function: 
-       * tau = kp * (qd-q) + kd* (dqd-dq) */
       double TimeStep;
       double _dimension;
 
@@ -86,7 +84,6 @@ namespace dynamicgraph {
       SignalPtr<dg::Vector, int> positionSIN;
       SignalPtr<dg::Vector, int> velocitySIN;
       SignalPtr<dg::Vector, int> calibration_torqueSIN;
-      // SignalPtr<dg::Vector,int> kpSIN;
       // this should be the offset that brings your legs to 0 configuration
       SignalPtr<dg::Vector, int> hardstop2zeroSIN;
       
@@ -106,19 +103,11 @@ namespace dynamicgraph {
       int num_joints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
-      // dg::Bool& get_flag( dg::Bool& flag, int t);
-      
-      // this is to keep track of when we start
-      // we do not check the threshold in the first X seconds,
-      // otherwise we could get a false positive. Hardcoded.
-      // dg::Vector maxTau;
       int calibrated_flag;
       dg::Vector is_calibrated;
       dg::Vector des_vel;
       dg::Vector error;
       dg::Vector start2hardstop; // this is recorded during calibration
-      // dg::Vector& getPositionError( dg::Vector& position_error,int t );
-      // dg::Vector& getVelocityError( dg::Vector& velocity_error,int t );
 
     };
 
