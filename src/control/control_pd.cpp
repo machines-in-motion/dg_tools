@@ -30,9 +30,9 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControlPD, "ControlPD");
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PDController, "PDController");
 
-const double ControlPD::
+const double PDController::
 TIME_STEP_DEFAULT = .001;
 
 /* --------------------------------------------------------------------- */
@@ -42,25 +42,25 @@ TIME_STEP_DEFAULT = .001;
 
 #define __SOT_ControlPD_INIT \
 
-ControlPD::ControlPD( const std::string & name )
+PDController::PDController( const std::string & name )
  :Entity(name)
  ,TimeStep(0)
- ,KpSIN(NULL,"ControlPD("+name+")::input(vector)::Kp")
- ,KdSIN(NULL,"ControlPD("+name+")::input(vector)::Kd")
- ,positionSIN(NULL,"ControlPD("+name+")::input(vector)::position")
- ,desiredpositionSIN(NULL,"ControlPD("+name+")::input(vector)::desired_position")
- ,velocitySIN(NULL,"ControlPD("+name+")::input(vector)::velocity")
- ,desiredvelocitySIN(NULL,"ControlPD("+name+")::input(vector)::desired_velocity")
- ,controlSOUT( boost::bind(&ControlPD::computeControl,this,_1,_2),
+ ,KpSIN(NULL,"PDController("+name+")::input(vector)::Kp")
+ ,KdSIN(NULL,"PDController("+name+")::input(vector)::Kd")
+ ,positionSIN(NULL,"PDController("+name+")::input(vector)::position")
+ ,desiredpositionSIN(NULL,"PDController("+name+")::input(vector)::desired_position")
+ ,velocitySIN(NULL,"PDController("+name+")::input(vector)::velocity")
+ ,desiredvelocitySIN(NULL,"PDController("+name+")::input(vector)::desired_velocity")
+ ,controlSOUT( boost::bind(&PDController::computeControl,this,_1,_2),
          KpSIN << KdSIN << positionSIN << desiredpositionSIN
          << velocitySIN << desiredvelocitySIN,
-        "ControlPD("+name+")::output(vector)::control" )
-  ,positionErrorSOUT(boost::bind(&ControlPD::computeControl,this,_1,_2),
+        "PDController("+name+")::output(vector)::control" )
+  ,positionErrorSOUT(boost::bind(&PDController::computeControl,this,_1,_2),
         controlSOUT,
-        "ControlPD("+name+")::output(vector)::position_error")
-  ,velocityErrorSOUT(boost::bind(&ControlPD::computeControl,this,_1,_2),
+        "PDController("+name+")::output(vector)::position_error")
+  ,velocityErrorSOUT(boost::bind(&PDController::computeControl,this,_1,_2),
         controlSOUT,
-        "ControlPD("+name+")::output(vector)::velocity_error")
+        "PDController("+name+")::output(vector)::velocity_error")
 {
   Entity::signalRegistration( KpSIN << KdSIN << positionSIN <<
     desiredpositionSIN << velocitySIN << desiredvelocitySIN << controlSOUT
@@ -71,9 +71,9 @@ ControlPD::ControlPD( const std::string & name )
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-void ControlPD::display( std::ostream& os ) const
+void PDController::display( std::ostream& os ) const
 {
-  os << "ControlPD "<<getName();
+  os << "PDController "<<getName();
   try{
     os <<"control = "<<controlSOUT;
   }
@@ -85,14 +85,14 @@ void ControlPD::display( std::ostream& os ) const
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-double& ControlPD::setsize(int dimension)
+double& PDController::setsize(int dimension)
 
 {
   _dimension = dimension;
   return _dimension;
 }
 
-dynamicgraph::Vector& ControlPD::
+dynamicgraph::Vector& PDController::
 computeControl( dynamicgraph::Vector &tau, int t )
 {
   sotDEBUGIN(15);
@@ -121,7 +121,7 @@ computeControl( dynamicgraph::Vector &tau, int t )
 
 
 
-dynamicgraph::Vector& ControlPD::
+dynamicgraph::Vector& PDController::
 getPositionError( dynamicgraph::Vector &position_error, int t)
 {
   //sotDEBUGOUT(15) ??
@@ -129,7 +129,7 @@ getPositionError( dynamicgraph::Vector &position_error, int t)
   return position_error;
 }
 
-dynamicgraph::Vector& ControlPD::
+dynamicgraph::Vector& PDController::
 getVelocityError( dynamicgraph::Vector &velocity_error, int t)
 {
   controlSOUT(t);

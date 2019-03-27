@@ -41,12 +41,12 @@ namespace dg = dynamicgraph;
 
 #if defined (WIN32)
 #  if defined (control_pd_EXPORTS)
-#    define ControlPD_EXPORT __declspec(dllexport)
+#    define PDController_EXPORT __declspec(dllexport)
 #  else
-#    define ControlPD_EXPORT  __declspec(dllimport)
+#    define PDController_EXPORT  __declspec(dllimport)
 #  endif
 #else
-#  define ControlPD_EXPORT
+#  define PDController_EXPORT
 #endif
 
 namespace dynamicgraph {
@@ -56,13 +56,13 @@ namespace dynamicgraph {
   /* --- CLASS ----------------------------------------------------------- */
   /* --------------------------------------------------------------------- */
 
-  class ControlPD_EXPORT ControlPD
+  class PDController_EXPORT PDController
     : public Entity
     {
 
     public: /* --- CONSTRUCTOR ---- */
 
-      ControlPD( const std::string & name );
+      PDController( const std::string & name );
 
     public: /* --- INIT --- */
 
