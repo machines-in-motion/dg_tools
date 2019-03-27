@@ -139,7 +139,10 @@ dynamicgraph::Vector&
     }
     // check if we've saturated on error. If yes, save position and flip flag
     // TODO: get rid of magic number
-    if((t-t_start)>threshold_time && abs(velocity[idx])<threshold_velocity){
+    if((t-t_start)>threshold_time && // finished ramp
+        abs(velocity[idx])<threshold_velocity && // joint has stopped
+        !is_calibrated[idx]) // hasn't already been calibrated
+      {
       start2hardstop[idx] = position[idx];
       if(t%100 == 0 && idx ==1){
         cout << "threshold triggered at: e(" << error[idx]
