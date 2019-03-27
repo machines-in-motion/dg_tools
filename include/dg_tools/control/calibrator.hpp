@@ -64,10 +64,6 @@ namespace dynamicgraph {
 
       Calibrator( const std::string & name );
 
-    public: /* --- INIT --- */
-
-      // void init( const double& step);
-
     public: /* --- CONSTANTS --- */
 
       /* Default values. */
@@ -89,8 +85,8 @@ namespace dynamicgraph {
     public:  /* --- SIGNALS --- */
       SignalPtr<dg::Vector, int> positionSIN;
       SignalPtr<dg::Vector, int> velocitySIN;
-      SignalPtr<dg::Vector, int> desiredVelocitySIN;
-      SignalPtr<dg::Vector,int> kpSIN;
+      SignalPtr<dg::Vector, int> calibration_torqueSIN;
+      // SignalPtr<dg::Vector,int> kpSIN;
       // this should be the offset that brings your legs to 0 configuration
       SignalPtr<dg::Vector, int> hardstop2zeroSIN;
       
@@ -103,9 +99,11 @@ namespace dynamicgraph {
     protected:
 
       double& setsize(int dimension);
-      int tStart;
-      int initFlag;
-      int numJoints;
+      int threshold_time; // in timesteps
+      double threshold_velocity;
+      int t_start;
+      int init_flag;
+      int num_joints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
       // dg::Bool& get_flag( dg::Bool& flag, int t);
@@ -113,8 +111,10 @@ namespace dynamicgraph {
       // this is to keep track of when we start
       // we do not check the threshold in the first X seconds,
       // otherwise we could get a false positive. Hardcoded.
-      dg::Vector isCalibrated;
-      dg::Vector desVel;
+      // dg::Vector maxTau;
+      int calibrated_flag;
+      dg::Vector is_calibrated;
+      dg::Vector des_vel;
       dg::Vector error;
       dg::Vector start2hardstop; // this is recorded during calibration
       // dg::Vector& getPositionError( dg::Vector& position_error,int t );
