@@ -33,16 +33,14 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
                 velocitySIN << desiredvelocitySIN,
                 "ComImpedanceControl("+name+")::output(vector)::tau")
-  ,pos_biasSOUT( boost::bind(&ComImpedanceControl::set_bias, this, _1, _2, _3),
-                positionSIN << velocitySIN, "ComImpedanceControl("+name+")::output(vector)::issetbias"
-
-  )
-
+  ,setbiasSOUT( boost::bind(&ComImpedanceControl::set_bias, this, _1, _1, _2),
+                positionSIN << velocitySIN, "ComImpedanceControl("+name+")::output(vector)::setbias")
+  // ,isbiasset(0)
 {
   init(TimeStep);
   Entity::signalRegistration(
     KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-    velocitySIN << desiredvelocitySIN << feedforwardforceSIN << controlSOUT
+    velocitySIN << desiredvelocitySIN << feedforwardforceSIN << setbiasSOUT << controlSOUT
   );
 }
 
@@ -68,9 +66,11 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     /*---------- checking if position is biased */
 
+
     /*---------- computing position error ----*/
     pos_error.array() = des_pos.array() - position.array();
     vel_error.array() = des_vel.array() - velocity.array();
+
     tau.array() = des_fff.array() + pos_error.array()*Kp.array()
                   + vel_error.array()*Kd.array();
 
@@ -80,26 +80,36 @@ dynamicgraph::Vector& ComImpedanceControl::
 
   }
 
-bool ComImpedanceControl::
+dynamicgraph::Vector& ComImpedanceControl::
   set_bias(dynamicgraph::Vector& pos_bias, dynamicgraph::Vector& vel_bias, int t){
 
     const dynamicgraph::Vector& position = positionSIN(t);
     const dynamicgraph::Vector& velocity = velocitySIN(t);
 
-    if (t == 0){
-      vicon_pos_bias.array() = position.array();
-      vicon_vel_bias.array() = velocity.array();
+    cout << "setting bias" << endl;
+    cout << isbiasset << endl;
+
+
+    if (isbiasset){
+      cout << "bias has already been set" << endl;
     }
-    else if(t < 1000){
-        vicon_pos_bias.array() += position.array();
-        vicon_vel_bias.array() += velocity.array();
+    else{
+      if (t == 0){
+        vicon_pos_bias.array() = position.array();
+        vicon_vel_bias.array() = velocity.array();
       }
-    else {
-      vicon_pos_bias.array() = 0.001 * vicon_pos_bias.array();
-      vicon_vel_bias.array() = 0.001 * vicon_vel_bias.array();
+      else if(t < 1000){
+          vicon_pos_bias.array() += position.array();
+          vicon_vel_bias.array() += velocity.array();
+        }
+      else {
+        vicon_pos_bias.array() = 0.001 * vicon_pos_bias.array();
+        vicon_vel_bias.array() = 0.001 * vicon_vel_bias.array();
 
+      }
+      isbiasset = 1;
     }
-    return true;
 
 
+    return vicon_vel_bias;
 }

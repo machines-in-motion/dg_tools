@@ -52,18 +52,20 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> desiredvelocitySIN; // is a 3d vector
         SignalPtr<dg::Vector,int> feedforwardforceSIN; // is a 3d vector
         SignalTimeDependent<dg::Vector, int> controlSOUT;
-        SignalTimeDependent<dg::Vector, int> set_biasSOUT;
+        SignalTimeDependent<dg::Vector, int> setbiasSOUT;
 
       protected:
 
         double TimeStep;
         double& setsize(int dimension);
         dg::Vector& return_control_torques( dg::Vector& tau, int t);
-        bool set_bias(dg::Vector& pos_bias, dg::Vector& vel_bias, int t);
+        dg::Vector& set_bias(dg::Vector& pos_bias, dg::Vector& vel_bias, int t);
         dg::Vector pos_error;
         dg::Vector vel_error;
         dg::Vector vicon_pos_bias; // can be renamed to other sensors
         dg::Vector vicon_vel_bias; // can be renamed to other sensors
+
+        int isbiasset;
 
 
       };
