@@ -33,14 +33,18 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
                 velocitySIN << desiredvelocitySIN,
                 "ComImpedanceControl("+name+")::output(vector)::tau")
-  ,setbiasSOUT( boost::bind(&ComImpedanceControl::set_bias, this, _1, _1, _2),
-                positionSIN << velocitySIN, "ComImpedanceControl("+name+")::output(vector)::setbias")
-  // ,isbiasset(0)
+  ,SetPosBiasSOUT( boost::bind(&ComImpedanceControl::set_pos_bias, this, _1,_2),
+                positionSIN , "ComImpedanceControl("+name+")::output(vector)::set_pos_bias")
+  ,SetVelBiasSOUT( boost::bind(&ComImpedanceControl::set_vel_bias, this, _1,_2),
+                velocitySIN, "ComImpedanceControl("+name+")::output(vector)::set_vel_bias")
+  ,isbiasset(0)
+  ,init_flag(1)
+  ,bias_time(10)
 {
   init(TimeStep);
   Entity::signalRegistration(
-    KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-    velocitySIN << desiredvelocitySIN << feedforwardforceSIN << setbiasSOUT << controlSOUT
+    SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
+    velocitySIN << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT
   );
 }
 
@@ -64,15 +68,15 @@ dynamicgraph::Vector& ComImpedanceControl::
     assert(des_vel.size() == 3);
     assert(des_fff.size() == 3);
 
-    /*---------- checking if position is biased */
-
 
     /*---------- computing position error ----*/
     pos_error.array() = des_pos.array() - position.array();
     vel_error.array() = des_vel.array() - velocity.array();
 
-    tau.array() = des_fff.array() + pos_error.array()*Kp.array()
-                  + vel_error.array()*Kd.array();
+    // tau.array() = des_fff.array() + pos_error.array()*Kp.array()
+    //               + vel_error.array()*Kd.array();
+
+    tau.array() = pos_error.array();
 
     sotDEBUGOUT(15);
 
@@ -81,35 +85,76 @@ dynamicgraph::Vector& ComImpedanceControl::
   }
 
 dynamicgraph::Vector& ComImpedanceControl::
-  set_bias(dynamicgraph::Vector& pos_bias, dynamicgraph::Vector& vel_bias, int t){
+  set_pos_bias(dynamicgraph::Vector& pos_bias, int t){
+ // TODO: ask Max about the reference (why do you need to return a ref?)
 
-    const dynamicgraph::Vector& position = positionSIN(t);
-    const dynamicgraph::Vector& velocity = velocitySIN(t);
+   const dynamicgraph::Vector& position = positionSIN(t);
+   const dynamicgraph::Vector& velocity = velocitySIN(t);
 
-    cout << "setting bias" << endl;
-    cout << isbiasset << endl;
+    if(init_flag){
+      t_start = t;
+      pos_bias.resize(3); pos_bias.setZero();
+      init_flag = 0;
+      cout << "init_flag set" << endl;
+      cout << t_start << endl;
+      cout << init_flag << endl;
+    }
 
+    cout << "time" << t << endl;
+
+    assert(pos_bias.size() == 3);
 
     if (isbiasset){
       cout << "bias has already been set" << endl;
+      cout << pos_bias.array() << endl ;
     }
     else{
-      if (t == 0){
-        vicon_pos_bias.array() = position.array();
-        vicon_vel_bias.array() = velocity.array();
+      if (t == t_start){
+        cout << "assigning first element of pos_bias" << endl;
+        pos_bias.array() = position.array()/bias_time;
+        cout << "completed assigning first element of pos_bias" << endl;
       }
-      else if(t < 1000){
-          vicon_pos_bias.array() += position.array();
-          vicon_vel_bias.array() += velocity.array();
+      else if(t < bias_time + t_start){
+          cout << "setting mean bias" << endl;
+          cout << t << endl;
+          pos_bias.array() += position.array()/bias_time;
         }
       else {
-        vicon_pos_bias.array() = 0.001 * vicon_pos_bias.array();
-        vicon_vel_bias.array() = 0.001 * vicon_vel_bias.array();
+        cout << "bias has already been set" << endl;
 
+        isbiasset = 1;
       }
-      isbiasset = 1;
     }
+    return pos_bias;
+  }
 
 
-    return vicon_vel_bias;
+dynamicgraph::Vector& ComImpedanceControl::
+  set_vel_bias(dynamicgraph::Vector& vel_bias, int t){
+
+    if(init_flag){
+     t_start = t;
+     vel_bias.setZero();
+     init_flag = 0;
+    }
+    const dynamicgraph::Vector& position = positionSIN(t);
+    const dynamicgraph::Vector& velocity = velocitySIN(t);
+    if (isbiasset){
+      // cout << "bias has already been set" << endl;
+
+    }
+    else{
+      if (t == t_start){
+        vel_bias.array() = velocity.array()/bias_time;
+      }
+      else if(t-t_start < bias_time){
+          cout << t << endl;
+          vel_bias.array() += velocity.array()/bias_time;
+        }
+      else {
+        isbiasset = 1;
+      }
+
+    }
+    return vel_bias;
 }
