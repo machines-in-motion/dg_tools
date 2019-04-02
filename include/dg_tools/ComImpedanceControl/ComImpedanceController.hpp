@@ -49,9 +49,14 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> positionSIN;  // is a 3d vector (xyzquat)
         SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector (xyzquat)
         SignalPtr<dg::Vector, int> velocitySIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> inertiaSIN;
+        SignalPtr<dg::Vector, int> angvelSIN;
         SignalPtr<dg::Vector, int> desiredvelocitySIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> desiredangvelSIN;
         SignalPtr<dg::Vector,int> feedforwardforceSIN; // is a 3d vector
+        SignalPtr<dg::Vector,int> feedforwardtorquesSIN;
         SignalTimeDependent<dg::Vector, int> controlSOUT;
+        SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
         SignalTimeDependent<dg::Vector, int> SetPosBiasSOUT;
         SignalTimeDependent<dg::Vector, int> SetVelBiasSOUT;
       protected:
@@ -59,11 +64,15 @@ namespace dynamicgraph{
         double TimeStep;
         double& setsize(int dimension);
         dg::Vector& return_control_torques( dg::Vector& tau, int t);
+        dg::Vector& return_angcontrol_torques( dg::Vector& angtau, int t);
         dg::Vector& set_pos_bias(dg::Vector& pos_bias, int t);
         dg::Vector& set_vel_bias(dg::Vector& vel_bias, int t);
 
         dg::Vector pos_error;
         dg::Vector vel_error;
+        dg::Vector h_error;
+
+        dg::Vector position_bias;
 
         int init_flag;
         int isbiasset;
