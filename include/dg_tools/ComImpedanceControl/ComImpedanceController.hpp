@@ -46,12 +46,14 @@ namespace dynamicgraph{
 
         SignalPtr<dg::Vector, int> KpSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> KdSIN; // is a 3d vector
-        SignalPtr<dg::Vector, int> positionSIN;  // is a 3d vector (xyzquat)
-        SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector (xyzquat)
+        SignalPtr<dg::Vector, int> positionSIN;  // is a 3d vector
+        SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> biasedpositionSIN;
         SignalPtr<dg::Vector, int> velocitySIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> desiredvelocitySIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> biasedvelocitySIN;
         SignalPtr<dg::Vector, int> inertiaSIN;
         SignalPtr<dg::Vector, int> angvelSIN;
-        SignalPtr<dg::Vector, int> desiredvelocitySIN; // is a 3d vector
         SignalPtr<dg::Vector, int> desiredangvelSIN;
         SignalPtr<dg::Vector,int> feedforwardforceSIN; // is a 3d vector
         SignalPtr<dg::Vector,int> feedforwardtorquesSIN;
@@ -73,6 +75,8 @@ namespace dynamicgraph{
         dg::Vector h_error;
 
         dg::Vector position_bias;
+        dg::Vector velocity_bias;
+
 
         int init_flag;
         int isbiasset;

@@ -26,8 +26,10 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,KdSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kd")
   ,positionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::position")
   ,desiredpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_pos")
+  ,biasedpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_pos")
   ,velocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::velocity")
   ,desiredvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_vel")
+  ,biasedvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_vel")
   ,feedforwardforceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fff")
   ,inertiaSIN(NULL, "ComImpedanceControl("+name+")::input(vector::inertia)")
   ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector::angvel)")
@@ -51,8 +53,9 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
 {
   init(TimeStep);
   Entity::signalRegistration(
-    SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-    velocitySIN << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT << angcontrolSOUT
+    positionSIN << velocitySIN << SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN <<
+    biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN <<
+    desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT << angcontrolSOUT
   );
 }
 
@@ -61,9 +64,9 @@ dynamicgraph::Vector& ComImpedanceControl::
     sotDEBUGIN(15);
     const dynamicgraph::Vector& Kp = KpSIN(t);
     const dynamicgraph::Vector& Kd = KdSIN(t);
-    const dynamicgraph::Vector& position = positionSIN(t);
+    const dynamicgraph::Vector& position = biasedpositionSIN(t);
     const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
-    const dynamicgraph::Vector& velocity = velocitySIN(t);
+    const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
     const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
     const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
 
@@ -77,14 +80,28 @@ dynamicgraph::Vector& ComImpedanceControl::
     assert(des_fff.size() == 3);
 
 
+    // /*---------- bias values ----*/
+    // if (isbiasset){
+    //   pos_error.array() += position_bias.array();
+    //   vel_error.array() += velocity_bias.array();
+    // }
+
+    if (isbiasset){
+
     /*---------- computing position error ----*/
     pos_error.array() = des_pos.array() - position.array();
     vel_error.array() = des_vel.array() - velocity.array();
 
-    // tau.array() = des_fff.array() + pos_error.array()*Kp.array()
-    //               + vel_error.array()*Kd.array();
+    /*---------- computing tourques ----*/
 
-    tau.array() = pos_error.array();
+    tau.array() = des_fff.array() + pos_error.array()*Kp.array()
+                  + vel_error.array()*Kd.array();
+
+    }
+    else{
+      // quick hack to return zeros
+      tau.array() = des_pos.array() - des_pos.array();
+    }
 
     sotDEBUGOUT(15);
 
@@ -124,30 +141,39 @@ dynamicgraph::Vector& ComImpedanceControl::
 
 dynamicgraph::Vector& ComImpedanceControl::
   set_pos_bias(dynamicgraph::Vector& pos_bias, int t){
+    // NOTE : when a value of the signal is not computed at all timesteps
+    // create another variable tp compute the value and assign it to the signal
+    // at all time steps to ensure that the value of the signal is constant.
+    // When not done, the signal value fluctuates
+
     sotDEBUGIN(15);
     const dynamicgraph::Vector& position = positionSIN(t);
 
+    position_bias.resize(3);
+    pos_bias.resize(3);
 
     if(init_flag){
       t_start = t;
-      pos_bias.resize(3); pos_bias.setZero();
+      position_bias.setZero();
+      pos_bias.setZero();
       init_flag = 0;
     }
 
-    // assert(position.size() == 3 && "");
-    // assert(pos_bias.size() == 3 && "size not 3");
-
     if (isbiasset){
-      // cout << position.array() << endl;
+      // cout << "bias set" << endl;
+      for(int j = 0; j < 3 ; j++){
+        pos_bias[j] = position_bias[j];
+      }
     }
     else{
-
-      if(t < bias_time + t_start){
-          pos_bias.array() += (position.array());
+      for(int i = 0 ; i < 3; i ++){
+        if(t < bias_time + t_start){
+            position_bias[i] += position[i]/bias_time;
+          }
+        else {
+          isbiasset = 1;
         }
-      else {
-        pos_bias.array() = pos_bias.array()/2*bias_time;
-        isbiasset = 1;
+        pos_bias[i] = position_bias[i];
       }
     }
 
@@ -162,29 +188,31 @@ dynamicgraph::Vector& ComImpedanceControl::
     sotDEBUGIN(15);
     const dynamicgraph::Vector& velocity = velocitySIN(t);
 
+    velocity_bias.resize(3);
+    vel_bias.resize(3);
 
     if(init_flag){
       t_start = t;
-      vel_bias.resize(3); vel_bias.setZero();
+      velocity_bias.setZero();
+      vel_bias.setZero();
       init_flag = 0;
     }
 
-    assert(velocity.size() == 3);
-
-
     if (isbiasset){
+      // cout << "bias set" << endl;
+      for(int j = 0; j < 3 ; j++){
+        vel_bias[j] = velocity_bias[j];
+      }
     }
     else{
-      if (t == t_start){
-        vel_bias.array() += velocity.array()/bias_time;
-
-      }
-      else if(t < bias_time + t_start){
-
-          vel_bias.array() += velocity.array()/bias_time;
+      for(int i = 0 ; i < 3; i ++){
+        if(t < bias_time + t_start){
+            velocity_bias[i] += velocity[i]/bias_time;
+          }
+        else {
+          isbiasset = 1;
         }
-      else {
-        isbiasset = 1;
+        vel_bias[i] = velocity_bias[i];
       }
     }
 
