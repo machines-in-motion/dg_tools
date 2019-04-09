@@ -43,7 +43,7 @@ protected:
  */
 TEST_F(TestDGTools, test_control_pd_constructor)
 {
-  dynamicgraph::sot::ControlPD pd("a_pd_controller");
+  dynamicgraph::sot::PDController pd("a_pd_controller");
   ASSERT_EQ("PDController", pd.CLASS_NAME);
   ASSERT_EQ("PDController", pd.getClassName());
   ASSERT_EQ("a_pd_controller", pd.getName());
