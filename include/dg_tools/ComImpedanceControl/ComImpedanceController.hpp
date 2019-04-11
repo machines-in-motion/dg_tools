@@ -45,6 +45,7 @@ namespace dynamicgraph{
       public: /* ------ SIGNALS ---------*/
 
         SignalPtr<dg::Vector, int> KpSIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> KpAngSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> KdSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> positionSIN;  // is a 3d vector
         SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector
@@ -59,11 +60,16 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> feedforwardforceSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> feedforwardtorquesSIN;
         SignalPtr<dg::Vector, int> cntsensorSIN;
+        SignalPtr<dg::Vector, int> lqrerrorSIN;
+        SignalPtr<dg::Vector, int> lqrgainSIN;
+
         SignalTimeDependent<dg::Vector, int> controlSOUT;
         SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
         SignalTimeDependent<dg::Vector, int> SetPosBiasSOUT;
         SignalTimeDependent<dg::Vector, int> SetVelBiasSOUT;
         SignalTimeDependent<dg::Vector, int> ThrCntSensorSOUT;
+        SignalTimeDependent<dg::Vector, int> lqrcontrolSOUT;
+
       protected:
 
         double TimeStep;
@@ -73,7 +79,7 @@ namespace dynamicgraph{
         dg::Vector& set_pos_bias(dg::Vector& pos_bias, int t);
         dg::Vector& set_vel_bias(dg::Vector& vel_bias, int t);
         dg::Vector& threshold_cnt_sensor(dg::Vector& thr_cnt_sensor, int t);
-
+        dg::Vector& return_lqr_tau( dg::Vector& lqrtau, int t);
 
         dg::Vector pos_error;
         dg::Vector vel_error;
@@ -82,6 +88,7 @@ namespace dynamicgraph{
         dg::Vector position_bias;
         dg::Vector velocity_bias;
 
+        dg::Vector delta_f;
 
         int init_flag_pos;
         int init_flag_vel;

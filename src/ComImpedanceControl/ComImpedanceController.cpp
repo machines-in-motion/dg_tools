@@ -23,6 +23,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   :Entity(name)
   ,TimeStep(0)
   ,KpSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kp")
+  ,KpAngSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kp_ang")
   ,KdSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kd")
   ,positionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::position")
   ,desiredpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_pos")
@@ -33,10 +34,12 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,feedforwardforceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fff")
   ,inertiaSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::inertia")
   ,massSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::mass")
-  ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector::angvel)")
+  ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::angvel")
   ,desiredangvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_angvel")
   ,feedforwardtorquesSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fft")
   ,cntsensorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::cnt_sensor")
+  ,lqrerrorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_error")
+  ,lqrgainSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_gain")
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
                 velocitySIN << desiredvelocitySIN << feedforwardforceSIN ,
@@ -51,6 +54,9 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                 velocitySIN, "ComImpedanceControl("+name+")::output(vector)::set_vel_bias")
   ,ThrCntSensorSOUT( boost::bind(&ComImpedanceControl::threshold_cnt_sensor, this, _1, _2),
                 cntsensorSIN, "ComImpedanceControl("+name+")::output(vector)::thr_cnt_sensor")
+  ,lqrcontrolSOUT( boost::bind(&ComImpedanceControl::return_lqr_tau, this, _1,_2),
+                    lqrgainSIN << lqrerrorSIN,
+                   "ComImpedanceControl("+name+")::output(vector)::lqrtau")
   ,isbiasset(0)
   ,safetyswitch(0)
   ,init_flag_pos(1)
@@ -62,9 +68,41 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     positionSIN << velocitySIN << SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN <<
     biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
     << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT
-    << angcontrolSOUT
+    << angvelSIN << KpAngSIN << inertiaSIN << desiredangvelSIN << feedforwardtorquesSIN
+    << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT
   );
 }
+
+dynamicgraph::Vector& ComImpedanceControl::
+  return_lqr_tau( dynamicgraph::Vector &lqrtau, int t){
+    sotDEBUGIN(15);
+
+    /** This method carries out a matrix multiplication of lqr gains
+    obtained from the dynamic planner.
+    lqr_matrix * [[com_error], [lmom_error], [amom_error]] **/
+
+    const dynamicgraph::Vector& lqr_vector = lqrgainSIN(t);
+    const dynamicgraph::Vector& lqr_error = lqrerrorSIN(t);
+
+    delta_f.resize(12); delta_f.setZero();
+    lqrtau.resize(12);lqrtau.setZero();
+    assert(lqr_vector.size()==108);
+    assert(lqr_error.size()==9);
+
+    /*------ multiplying as a matrix ----------------------*/
+    int index = 0;
+    for(int i = 0; i < 12; i ++){
+      for(int j = 0; j < 9; j ++ ){
+        delta_f[i] = lqr_vector[index]*lqr_error[j];
+        index++;
+      }
+    }
+
+    lqrtau.array() = delta_f.array();
+    sotDEBUGOUT(15);
+    return lqrtau;
+    }
+
 
 dynamicgraph::Vector& ComImpedanceControl::
   return_control_torques( dynamicgraph::Vector &tau, int t){
@@ -161,24 +199,26 @@ dynamicgraph::Vector& ComImpedanceControl::
   return_angcontrol_torques( dynamicgraph::Vector &angtau, int t){
     sotDEBUGIN(15);
 
-    const dynamicgraph::Vector& Kp = KpSIN(t);
-    const dynamicgraph::Vector& Kd = KdSIN(t);
+    const dynamicgraph::Vector& Kp_ang = KpAngSIN(t);
     const dynamicgraph::Vector& inertia = inertiaSIN(t);
     const dynamicgraph::Vector& omega = angvelSIN(t);
     const dynamicgraph::Vector& omega_des = desiredangvelSIN(t);
     const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
 
     /*----- assertions of sizes -------------*/
-    assert(Kp.size() == 3);
-    assert(Kd.size() == 3);
+    assert(Kp_ang.size() == 3);
     assert(omega.size() == 3);
     assert(omega_des.size() == 3);
     assert(hd_des.size()==3);
+    assert(inertia.size()==3);
 
     /*---------- computing ang error ----*/
     h_error.array() = inertia.array()*(omega.array() - omega_des.array());
 
-    angtau.array() = hd_des.array() + Kp.array() * h_error.array();
+    angtau.array() = hd_des.array() + Kp_ang.array() * h_error.array();
+
+    /*------------ Safety checks -------*/
+    // if (h_error[])
 
 
     sotDEBUGOUT(15);
@@ -287,11 +327,11 @@ dynamicgraph::Vector& ComImpedanceControl::
       if (cnt_sensor[i] < 0.2){
         thr_cnt_sensor[i] = 0.0 ;
       }
-      else if (cnt_sensor[i] > 0.8){
-        thr_cnt_sensor[i] = 1.0;
-      }
+      // else if (cnt_sensor[i] > 0.8){
+      //   thr_cnt_sensor[i] = 1.0;
+      // }
       else{
-        thr_cnt_sensor[i] = cnt_sensor[i];
+        thr_cnt_sensor[i] = 1.0;
       }
       // cnt sensor return 0 when in contact
       // negating it to one
