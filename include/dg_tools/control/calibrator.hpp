@@ -91,9 +91,14 @@ namespace dynamicgraph {
       // OUTPUT SIGNALS
       SignalTimeDependent<dg::Vector, int> positionSOUT;
       // Only used during calibration part
-      SignalTimeDependent<dg::Vector,int> controlSOUT;
+      SignalTimeDependent<dg::Vector, int> controlSOUT;
+      SignalTimeDependent<dg::Vector, int> calibrated_flagSOUT;
 
     protected:
+
+      // signal refresher can be used to trigger SOUTs that do not depend on
+      // any SINs.
+      SignalTimeDependent<int, int> internal_signal_refresher_;
 
       double& setsize(int dimension);
       int threshold_time; // in timesteps
@@ -103,8 +108,10 @@ namespace dynamicgraph {
       int num_joints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
-      int calibrated_flag;
-      dg::Vector is_calibrated;
+      dg::Vector& is_calibrated( dynamicgraph::Vector& 
+                                calibrated_flag, int t);
+      int calibrated_flag_;
+      dg::Vector calibrated;
       dg::Vector des_vel;
       dg::Vector error;
       dg::Vector start2hardstop; // this is recorded during calibration
