@@ -114,9 +114,6 @@ dynamicgraph::Vector&
   }
 
   // ramp to calibration torque in threshold_time, then hold
-  // Wrong: for negative direction, does not ramp due to signness of min()
-  // torque = calibration_torque.array().min(
-  //         calibration_torque.array()/threshold_time*(t-t_start)).array();
 
   for(int idx = 0; idx < num_joints; idx++){
     // turn motors off after calibration is finished
