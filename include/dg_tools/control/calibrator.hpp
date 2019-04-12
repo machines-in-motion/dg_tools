@@ -108,8 +108,7 @@ namespace dynamicgraph {
       int num_joints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
-      int& is_calibrated( int& 
-                                calibrated_flag, int t);
+      int& is_calibrated( int& calibrated_flag, int t);
       int calibrated_flag_;
       dg::Vector calibrated;
       dg::Vector des_vel;

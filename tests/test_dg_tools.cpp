@@ -11,6 +11,7 @@
 
 #include <gtest/gtest.h>
 #include "dg_tools/control/control_pd.hpp"
+#include "dg_tools/control/calibrator.hpp"
 
 /**
  * @brief The DISABLED_TestDGTools class is used to disable test.
@@ -47,4 +48,12 @@ TEST_F(TestDGTools, test_control_pd_constructor)
   ASSERT_EQ("PDController", pd.CLASS_NAME);
   ASSERT_EQ("PDController", pd.getClassName());
   ASSERT_EQ("a_pd_controller", pd.getName());
+}
+
+TEST_F(TestDGTools, test_control_calibrator_constructor)
+{
+  dynamicgraph::sot::Calibrator pd("a_calibrator");
+  ASSERT_EQ("Calibrator", pd.CLASS_NAME);
+  ASSERT_EQ("Calibrator", pd.getClassName());
+  ASSERT_EQ("a_calibrator", pd.getName());
 }
