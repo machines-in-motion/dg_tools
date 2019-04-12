@@ -144,11 +144,11 @@ dynamicgraph::Vector&
   return torque;
 }
 
-dynamicgraph::Vector &Calibrator::
-is_calibrated( dynamicgraph::Vector &calibrated_flag, int t)
+int &Calibrator::
+is_calibrated( int &calibrated_flag, int t)
 {
-  calibrated_flag.resize(1,1);// = calibrated_flag_;
-  calibrated_flag_ = calibrated_flag_;
+  // calibrated_flag.resize(1,1);// = calibrated_flag_;
+  calibrated_flag = calibrated_flag_;
   return calibrated_flag;
 }
 

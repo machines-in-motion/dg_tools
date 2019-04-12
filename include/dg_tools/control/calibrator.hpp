@@ -92,7 +92,7 @@ namespace dynamicgraph {
       SignalTimeDependent<dg::Vector, int> positionSOUT;
       // Only used during calibration part
       SignalTimeDependent<dg::Vector, int> controlSOUT;
-      SignalTimeDependent<dg::Vector, int> calibrated_flagSOUT;
+      SignalTimeDependent<int, int> calibrated_flagSOUT;
 
     protected:
 
@@ -108,7 +108,7 @@ namespace dynamicgraph {
       int num_joints;
       dg::Vector& calibrate( dg::Vector& tau, int t );
       dg::Vector& compute_position( dg::Vector& pos, int t);
-      dg::Vector& is_calibrated( dynamicgraph::Vector& 
+      int& is_calibrated( int& 
                                 calibrated_flag, int t);
       int calibrated_flag_;
       dg::Vector calibrated;
