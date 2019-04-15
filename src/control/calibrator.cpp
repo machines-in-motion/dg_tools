@@ -54,18 +54,22 @@ Calibrator::Calibrator( const std::string & name )
  ,controlSOUT( boost::bind(&Calibrator::calibrate,this,_1,_2),
   positionSIN << velocitySIN << calibration_torqueSIN,
  "Calibrator("+name+")::output(vector)::control" )
+ ,calibrated_flagSOUT( boost::bind(&Calibrator::is_calibrated,this,_1,_2),
+  internal_signal_refresher_,"Calibrator("+name+
+  ")::output(vector)::calibrated_flag" )
+ ,internal_signal_refresher_("Calibrator("+name+")::intern(dummy)::refresher")
  ,init_flag(1)
- ,calibrated_flag(0)
+ ,calibrated_flag_(0) // now a signal_OUT
  ,threshold_time(1000) // threshold_time used to ramp up
  ,threshold_velocity(0.001)
 {
-  Entity::signalRegistration( positionSIN << velocitySIN << hardstop2zeroSIN << 
-                          calibration_torqueSIN << positionSOUT << controlSOUT);
-}
+  internal_signal_refresher_.setDependencyType(
+    dynamicgraph::TimeDependency<int>::ALWAYS_READY);
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
+  Entity::signalRegistration( positionSIN << velocitySIN << hardstop2zeroSIN << 
+                      calibration_torqueSIN << positionSOUT << controlSOUT 
+                      << calibrated_flagSOUT);
+}
 
 // TODO: setters for thresholds
 
@@ -103,20 +107,17 @@ dynamicgraph::Vector&
   if(init_flag){   
     t_start = t;
     error.resize(num_joints); error.setZero();
-    is_calibrated.resize(num_joints); is_calibrated.setZero();
+    calibrated.resize(num_joints); calibrated.setZero();
     start2hardstop.resize(num_joints); start2hardstop.setZero();
 
     init_flag = 0;
   }
 
   // ramp to calibration torque in threshold_time, then hold
-  // Wrong: for negative direction, does not ramp due to signness of min()
-  // torque = calibration_torque.array().min(
-  //         calibration_torque.array()/threshold_time*(t-t_start)).array();
 
   for(int idx = 0; idx < num_joints; idx++){
     // turn motors off after calibration is finished
-    if(is_calibrated[idx]){
+    if(calibrated[idx]){
         torque[idx]=0;
     } else {
       if((t-t_start)<=threshold_time){ //ramp
@@ -128,19 +129,27 @@ dynamicgraph::Vector&
     // check if we've saturated on error. If yes, save position and flip flag
     if((t-t_start)>threshold_time && // finished ramp
         abs(velocity[idx])<threshold_velocity && // joint has stopped
-        !is_calibrated[idx]) // hasn't already been calibrated
+        !calibrated[idx]) // hasn't already been calibrated
       {
       start2hardstop[idx] = position[idx];
-      is_calibrated[idx] = true;
+      calibrated[idx] = true;
     }
   }
 
   // if all joints are calibrated, yay.
-  if(is_calibrated.sum() == num_joints && !calibrated_flag){
-    calibrated_flag = 1;
+  if(calibrated.sum() == num_joints && !calibrated_flag_){
+    calibrated_flag_ = 1;
   }
   sotDEBUGOUT(15);
   return torque;
+}
+
+int &Calibrator::
+is_calibrated( int &calibrated_flag, int t)
+{
+  // calibrated_flag.resize(1,1);// = calibrated_flag_;
+  calibrated_flag = calibrated_flag_;
+  return calibrated_flag;
 }
 
 dynamicgraph::Vector &Calibrator::

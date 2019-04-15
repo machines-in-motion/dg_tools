@@ -6,10 +6,11 @@ from dynamic_graph_manager.dg_tools import MemoryReplay
 class TestMemoryReplay(unittest.TestCase):
     def test_basic(self):
         a = np.random.rand(2, 3)
+        a = tuple([tuple(b) for b in a])
         entity = MemoryReplay('')
 
         # Init from the matrix.
-        entity.init(a.tolist())
+        entity.init(a)
 
         # Replay the memory.
         entity.sout.recompute(10)

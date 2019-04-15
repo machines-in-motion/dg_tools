@@ -61,9 +61,8 @@ dg::Vector& Upsampler::data_out_callback(dg::Vector& out, int time)
   }
 
   if ((time - first_time_) % upsampling_factor_ == 0) {
-    // We use the time as passed in and NOT the normalized time to avoid
-    // using mutliple notions of time inside the compute graph.
-    last_input_ = data_inputSIN(time);
+    // We use the time relative to the first time.
+    last_input_ = data_inputSIN((time - first_time_) / upsampling_factor_);
   }
 
   out = last_input_;
