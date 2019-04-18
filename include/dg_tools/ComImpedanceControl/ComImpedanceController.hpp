@@ -16,6 +16,10 @@ namespace dg = dynamicgraph;
 #include <dynamic-graph/signal-ptr.h>
 #include <dynamic-graph/entity.h>
 
+/*QP */
+
+#include <tsid/solvers/eiquadprog-fast.hpp>
+
 namespace dynamicgraph{
   namespace sot {
 /* ---------------------------------------------------------------------------*/
@@ -62,6 +66,14 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> cntsensorSIN;
         SignalPtr<dg::Vector, int> lqrerrorSIN;
         SignalPtr<dg::Vector, int> lqrgainSIN;
+        SignalPtr<dg::Vector, int> lctrlSIN;
+        SignalPtr<dg::Vector, int> actrlSIN;
+        SignalPtr<dg::Matrix, int> hessSIN;
+        SignalPtr<dg::Vector, int> g0SIN;
+        SignalPtr<dg::Matrix, int> ceSIN;
+        // SignalPtr<dg::Vector, int> ce0SIN;
+        // SignalPtr<dg::Matrix, int> ciSIN;
+        // SignalPtr<dg::Vector, int> ci0SIN;
 
         SignalTimeDependent<dg::Vector, int> controlSOUT;
         SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
@@ -69,6 +81,9 @@ namespace dynamicgraph{
         SignalTimeDependent<dg::Vector, int> SetVelBiasSOUT;
         SignalTimeDependent<dg::Vector, int> ThrCntSensorSOUT;
         SignalTimeDependent<dg::Vector, int> lqrcontrolSOUT;
+        SignalTimeDependent<dg::Vector, int> wbcontrolSOUT; //whole body control
+
+
 
       protected:
 
@@ -80,6 +95,8 @@ namespace dynamicgraph{
         dg::Vector& set_vel_bias(dg::Vector& vel_bias, int t);
         dg::Vector& threshold_cnt_sensor(dg::Vector& thr_cnt_sensor, int t);
         dg::Vector& return_lqr_tau( dg::Vector& lqrtau, int t);
+        dg::Vector& compute_end_eff_forces( dg::Vector & end_forces, int t);
+
 
         dg::Vector pos_error;
         dg::Vector vel_error;
@@ -89,6 +106,14 @@ namespace dynamicgraph{
         dg::Vector velocity_bias;
 
         dg::Vector delta_f;
+
+        float w1;
+        float w2;
+
+        dg::Vector ce0;
+        dg::Matrix ci;
+        dg::Vector ci0;
+
 
         int init_flag_pos;
         int init_flag_vel;

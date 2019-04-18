@@ -15,6 +15,8 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 using namespace std;
+using namespace tsid::solvers;
+
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ComImpedanceControl, "ComImpedanceControl");
 
@@ -40,6 +42,18 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,cntsensorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::cnt_sensor")
   ,lqrerrorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_error")
   ,lqrgainSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_gain")
+  ,lctrlSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  ,actrlSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  ,hessSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  ,g0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  ,ceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  // ,ce0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  // ,ciSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+  // ,ci0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::actrl")
+
+
+
+
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
                 velocitySIN << desiredvelocitySIN << feedforwardforceSIN ,
@@ -57,6 +71,9 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,lqrcontrolSOUT( boost::bind(&ComImpedanceControl::return_lqr_tau, this, _1,_2),
                     lqrgainSIN << lqrerrorSIN,
                    "ComImpedanceControl("+name+")::output(vector)::lqrtau")
+  ,wbcontrolSOUT( boost::bind(&ComImpedanceControl::compute_end_eff_forces, this, _1, _2),
+                      lctrlSIN << actrlSIN << hessSIN << g0SIN << ceSIN,
+                    "ComImpedanceControl("+name+")::output(vector)::wbctrl")
   ,isbiasset(0)
   ,safetyswitch(0)
   ,init_flag_pos(1)
@@ -69,7 +86,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
     << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT
     << angvelSIN << KpAngSIN << inertiaSIN << desiredangvelSIN << feedforwardtorquesSIN
-    << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT
+    << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << wbcontrolSOUT
   );
 }
 
@@ -224,6 +241,39 @@ dynamicgraph::Vector& ComImpedanceControl::
     sotDEBUGOUT(15);
     return angtau;
   }
+
+
+dynamicgraph::Vector& ComImpedanceControl::
+  compute_end_eff_forces(dynamicgraph::Vector & end_forces, int t){
+
+    sotDEBUGIN(15);
+
+    /**** based on forced distribution from qp *********/
+
+    const dynamicgraph::Vector& lctrl = lctrlSIN(t);
+    const dynamicgraph::Vector& actrl = actrlSIN(t);
+    const dynamicgraph::Matrix& hess = hessSIN(t);
+    const dynamicgraph::Vector& g0 = g0SIN(t);
+    const dynamicgraph::Matrix& ce = ceSIN(t);
+
+
+    /******* setting up the QP *************************/
+
+    ci = Eigen::MatrixXd::Zero(0,0);
+    ci0 = Eigen::VectorXd::Zero(0);
+
+    ce0.resize(6);
+    ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
+    ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+
+
+    tsid::solvers::EiquadprogFast a;
+    a.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
+
+    return end_forces;
+
+  }
+
 
 
 
