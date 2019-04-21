@@ -27,6 +27,7 @@ search_for_eigen()
 search_for_python()
 
 # Trigger dependency to dynamic-graph.
+add_required_dependency("tsid")
 add_required_dependency("dynamic-graph >= 3.0.0")
 add_required_dependency("dynamic-graph-python >= 3.0.0")
 
