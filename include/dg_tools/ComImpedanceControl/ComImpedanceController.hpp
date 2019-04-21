@@ -11,14 +11,14 @@
 #include <dynamic-graph/linear-algebra.h>
 namespace dg = dynamicgraph;
 
+/*QP */
+
+#include <tsid/solvers/eiquadprog-fast.hpp>
+
 /* SOT */
 #include <dynamic-graph/signal-time-dependent.h>
 #include <dynamic-graph/signal-ptr.h>
 #include <dynamic-graph/entity.h>
-
-/*QP */
-
-#include <tsid/solvers/eiquadprog-fast.hpp>
 
 namespace dynamicgraph{
   namespace sot {
@@ -72,8 +72,8 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> g0SIN;
         SignalPtr<dg::Matrix, int> ceSIN;
         // SignalPtr<dg::Vector, int> ce0SIN;
-        // SignalPtr<dg::Matrix, int> ciSIN;
-        // SignalPtr<dg::Vector, int> ci0SIN;
+        SignalPtr<dg::Matrix, int> ciSIN;
+        SignalPtr<dg::Vector, int> ci0SIN;
 
         SignalTimeDependent<dg::Vector, int> controlSOUT;
         SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
@@ -111,8 +111,11 @@ namespace dynamicgraph{
         float w2;
 
         dg::Vector ce0;
-        dg::Matrix ci;
-        dg::Vector ci0;
+        // dg::Matrix ci;
+        // dg::Vector ci0;
+
+
+        tsid::solvers::EiquadprogFast m_solver;
 
 
         int init_flag_pos;
