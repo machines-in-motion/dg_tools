@@ -29,6 +29,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,TimeStep(0)
   ,KpSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kp")
   ,KpAngSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kp_ang")
+  ,KdAngSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kd_ang")
   ,KdSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::Kd")
   ,positionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::position")
   ,desiredpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_pos")
@@ -39,6 +40,8 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,feedforwardforceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fff")
   ,inertiaSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::inertia")
   ,massSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::mass")
+  ,oriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ori")
+  ,desoriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_ori")
   ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::angvel")
   ,desiredangvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_angvel")
   ,feedforwardtorquesSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fft")
@@ -76,7 +79,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                       lctrlSIN << actrlSIN << hessSIN << g0SIN << ceSIN
                       << ciSIN << ci0SIN,
                     "ComImpedanceControl("+name+")::output(vector)::wbctrl")
-  ,isbiasset(0)
+  ,isbiasset(1)
   ,safetyswitch(0)
   ,init_flag_pos(1)
   ,init_flag_vel(1)
@@ -86,8 +89,9 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   Entity::signalRegistration(
     positionSIN << velocitySIN << SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN <<
     biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
-    << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT
-    << angvelSIN << KpAngSIN << inertiaSIN << desiredangvelSIN << feedforwardtorquesSIN
+    << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT <<
+    oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredangvelSIN
+    << feedforwardtorquesSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
     << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN <<
     wbcontrolSOUT
@@ -146,6 +150,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     assert(des_vel.size() == 3);
     assert(des_fff.size() == 3);
 
+    // cout << "isbiasset" << isbiasset << endl;
     if (isbiasset){
       if(!safetyswitch){
 
@@ -154,28 +159,28 @@ dynamicgraph::Vector& ComImpedanceControl::
         vel_error.array() = des_vel.array() - velocity.array();
 
         /*------------safety checks---------------*/
-        if (pos_error[0] > 0.4 || pos_error[0] < -0.4){
-          cout << "pos_error[0] exceeded limit..." << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
-        else if (pos_error[2] > 0.32 || pos_error[2] < -0.32){
-          cout << "pos_error[2] exceeded limit..." << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
-
-        if (vel_error[0] > 2.0 || vel_error[0] < -1.5){
-          cout << "vel_error[0] exceeded limit..." << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
-
-        else if (vel_error[2] > 2.0 || vel_error[2] < -1.5){
-          cout << "vel_error[2] exceeded limit..." << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
+        // if (pos_error[0] > 0.4 || pos_error[0] < -0.4){
+        //   cout << "pos_error[0] exceeded limit..." << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
+        // else if (pos_error[2] > 0.32 || pos_error[2] < -0.32){
+        //   cout << "pos_error[2] exceeded limit..." << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
+        //
+        // if (vel_error[0] > 2.0 || vel_error[0] < -2.5){
+        //   cout << "vel_error[0] exceeded limit..." << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
+        //
+        // else if (vel_error[2] > 2.0 || vel_error[2] < -2.5){
+        //   cout << "vel_error[2] exceeded limit..." << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
 
         /*---------- computing tourques ----*/
 
@@ -184,31 +189,34 @@ dynamicgraph::Vector& ComImpedanceControl::
         // tau.array() = pos_error.array()*Kp.array();
 
         /*------------safety checks---------------*/
-        if(tau[0] > 2.0* 9.81*mass[0]){
-          cout << "tau[0] above limit" << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
-
-        else if (tau[2] > 2.0*9.81*mass[2]){
-          cout << "tau[2] above limit" << endl;
-          cout << "going to safety mode" << endl;
-          safetyswitch = 1;
-        }
+        // if(tau[0] > 2.0* 9.81*mass[0]){
+        //   cout << "tau[0] above limit" << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
+        //
+        // else if (tau[2] > 6.0*9.81*mass[2]){
+        //   cout << "tau[2] above limit" << endl;
+        //   cout << "going to safety mode" << endl;
+        //   safetyswitch = 0;
+        // }
 
         tau[1] = 0.0;
       }
-      else if (safetyswitch){
-        // cout << "in safety switch" << endl;
-        tau[0] = 0;
-        tau[1] = 0;
-        tau[2] = 9.81*mass[2];
-      }
+      // else if (safetyswitch){
+      //   // cout << "in safety switch" << endl;
+      //   tau[0] = 0;
+      //   tau[1] = 0;
+      //   tau[2] = 9.81*mass[2];
+      // }
     }
     else{
       // quick hack to return zeros
+      // cout << "bias is not set" << endl;
       tau.array() = des_pos.array() - des_pos.array();
     }
+
+    // cout << "tau array is" << tau[2] << endl;
 
     sotDEBUGOUT(15);
 
@@ -221,26 +229,63 @@ dynamicgraph::Vector& ComImpedanceControl::
     sotDEBUGIN(15);
 
     const dynamicgraph::Vector& Kp_ang = KpAngSIN(t);
+    const dynamicgraph::Vector& Kd_ang = KdAngSIN(t);
     const dynamicgraph::Vector& inertia = inertiaSIN(t);
+    const dynamicgraph::Vector& des_ori = desoriSIN(t);
+    const dynamicgraph::Vector& ori = oriSIN(t);
     const dynamicgraph::Vector& omega = angvelSIN(t);
     const dynamicgraph::Vector& omega_des = desiredangvelSIN(t);
     const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
 
-    /*----- assertions of sizes -------------*/
-    assert(Kp_ang.size() == 3);
-    assert(omega.size() == 3);
-    assert(omega_des.size() == 3);
-    assert(hd_des.size()==3);
-    assert(inertia.size()==3);
+    if (isbiasset){
+      /*----- assertions of sizes -------------*/
+      assert(Kp_ang.size() == 3);
+      assert(Kd_ang.size() == 3);
+      assert(des_ori.size() == 4);
+      assert(ori.size() == 4);
+      assert(omega.size() == 3);
+      assert(omega_des.size() == 3);
+      assert(hd_des.size()==3);
+      assert(inertia.size()==3);
 
-    /*---------- computing ang error ----*/
-    h_error.array() = inertia.array()*(omega.array() - omega_des.array());
+      des_ori_quat.w() = des_ori[3];
+      des_ori_quat.vec()[0] = des_ori[0];
+      des_ori_quat.vec()[1] = des_ori[1];
+      des_ori_quat.vec()[2] = des_ori[2];
 
-    angtau.array() = hd_des.array() + Kp_ang.array() * h_error.array();
+      ori_quat.w() = ori[3];
+      ori_quat.vec()[0] = ori[0];
+      ori_quat.vec()[1] = ori[1];
+      ori_quat.vec()[2] = ori[2];
+
+      des_ori_se3 = des_ori_quat.toRotationMatrix();
+      ori_se3 = ori_quat.toRotationMatrix();
+
+      ori_error_se3 = des_ori_se3.transpose() * ori_se3;
+      ori_error_quat = ori_error_se3;
+
+      //todo: multiply as matrix
+
+      ori_error.resize(3);
+      ori_error[0] = -2.0*(ori_error_quat.vec()[0] + ori_error_quat.w())*ori_error_quat.vec()[0] * Kp_ang[0];
+      ori_error[1] = -2.0*(ori_error_quat.vec()[1] + ori_error_quat.w())*ori_error_quat.vec()[1] * Kp_ang[1];
+      ori_error[2] = -2.0*(ori_error_quat.vec()[2] + ori_error_quat.w())*ori_error_quat.vec()[2] * Kp_ang[2];
+
+      /*---------- computing ang error ----*/
+      h_error.array() = inertia.array()*(omega.array() - omega_des.array());
+
+      angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
+
+    }
+
+    else {
+      angtau.array() = omega.array() - omega.array();
+    }
 
     /*------------ Safety checks -------*/
     // if (h_error[])
 
+    // cout << ang_tau[1] << endl;
 
     sotDEBUGOUT(15);
     return angtau;
@@ -271,10 +316,13 @@ dynamicgraph::Vector& ComImpedanceControl::
     ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
     ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
 
-    // m_solver.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
+    m_solver.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
 
-    end_forces[0] = 0.0;
-    end_forces[1] = 0.0;
+    // cout << "FL" << end_forces[2] << endl;
+    // cout << "FR" << end_forces[5] << endl;
+    // cout << "HL" << end_forces[8] << endl;
+    // cout << "HR" << end_forces[11] << endl;
+
 
 
     return end_forces;

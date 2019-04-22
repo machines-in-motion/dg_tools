@@ -50,6 +50,7 @@ namespace dynamicgraph{
 
         SignalPtr<dg::Vector, int> KpSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> KpAngSIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> KdAngSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> KdSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> positionSIN;  // is a 3d vector
         SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector
@@ -59,6 +60,8 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> biasedvelocitySIN;
         SignalPtr<dg::Vector, int> inertiaSIN;
         SignalPtr<dg::Vector, int> massSIN;
+        SignalPtr<dg::Vector, int> oriSIN; //base orientation 4d vector quaternion
+        SignalPtr<dg::Vector, int> desoriSIN; //base orientation 4d vector quaternion
         SignalPtr<dg::Vector, int> angvelSIN;
         SignalPtr<dg::Vector, int> desiredangvelSIN;
         SignalPtr<dg::Vector, int> feedforwardforceSIN; // is a 3d vector
@@ -97,10 +100,10 @@ namespace dynamicgraph{
         dg::Vector& return_lqr_tau( dg::Vector& lqrtau, int t);
         dg::Vector& compute_end_eff_forces( dg::Vector & end_forces, int t);
 
-
         dg::Vector pos_error;
         dg::Vector vel_error;
         dg::Vector h_error;
+        dg::Vector ori_error;
 
         dg::Vector position_bias;
         dg::Vector velocity_bias;
@@ -117,6 +120,14 @@ namespace dynamicgraph{
 
         tsid::solvers::EiquadprogFast m_solver;
 
+        Eigen::Quaternion<double> ori_quat;
+        Eigen::Quaternion<double> des_ori_quat;
+        Eigen::Quaternion<double> ori_error_quat;
+
+
+        Eigen::Matrix<double, 3, 3> ori_se3;
+        Eigen::Matrix<double, 3, 3> des_ori_se3;
+        Eigen::Matrix<double, 3, 3> ori_error_se3; // refer to christian ott paper for definitions (Rdb)
 
         int init_flag_pos;
         int init_flag_vel;
