@@ -4,10 +4,6 @@
 
 #include <iostream>
 #include "dg_tools/ComImpedanceControl/ComImpedanceController.hpp"
-/*QP */
-
-#include <tsid/solvers/eiquadprog-fast.hpp>
-
 
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
@@ -18,7 +14,6 @@
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 using namespace std;
-using namespace tsid::solvers;
 
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ComImpedanceControl, "ComImpedanceControl");
@@ -57,6 +52,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   // ,ce0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ce0")
   ,ciSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::ci")
   ,ci0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ci0")
+  ,regSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::reg")
 
 
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
@@ -94,7 +90,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredangvelSIN
     << feedforwardtorquesSIN << thrcntvalueSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
-    << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN <<
+    << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN <<
     wbcontrolSOUT
   );
 }
@@ -263,40 +259,104 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Matrix& ce = ceSIN(t);
     const dynamicgraph::Matrix& ci = ciSIN(t);
     const dynamicgraph::Vector& ci0 = ci0SIN(t);
-    // const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
+    const dynamicgraph::Matrix& reg = regSIN(t);
+    const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
 
 
     end_forces.resize(18);
-    // assert(thrcntvalue.size()==4);
+    assert(thrcntvalue.size()==4);
 
     if(isbiasset){
-      ce0.resize(6);
+      if(thrcntvalue.sum() > 0.5){
+        ce0.resize(6);
 
-      // cout << "started " << endl;
-      assert(lctrl.size()==3);
-      assert(actrl.size()==3);
-      assert(g0.size()== 18);
-      assert(ce0.size()==6);
-
-      /******* setting up the QP *************************/
-
-      ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
-      ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
-
-      /******** setting elements of matrix to zero when foot is not
-      ********* on the ground ***********************************************/
-
-      qp.problem(18, 6, 6);
-      qp.solve(hess, g0, ce, ce0, ci, ci0);
-      // m_solver.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
-
-      end_forces = qp.result();
-      // end_forces.setZero();
+        // cout << "started " << endl;
+        assert(lctrl.size()==3);
+        assert(actrl.size()==3);
+        assert(g0.size()== 18);
+        assert(ce0.size()==6);
 
 
+        hess_new = hess;
+        ce_new = ce;
+
+        /******* setting up the QP *************************/
+
+        ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
+        ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+
+        /******** setting elements of matrix to zero when foot is not
+        ********* on the ground ***********************************************/
+
+        qp.problem(18, 6, 6);
+
+        if(thrcntvalue[0] < 0.2){
+          // setting the columns related to Fl to zero since it is not on the ground
+          // cout << "FL not on ground" << endl;
+
+          hess_new.col(0).setZero();
+          hess_new.col(1).setZero();
+          hess_new.col(2).setZero();
+
+          ce_new.col(0).setZero();
+          ce_new.col(1).setZero();
+          ce_new.col(2).setZero();
+        }
+
+        if(thrcntvalue[1] < 0.2){
+          // setting the cols related to Fl to zero since it is not on the ground
+          // cout << "FR not on ground" << endl;
+
+          hess_new.col(3).setZero();
+          hess_new.col(4).setZero();
+          hess_new.col(5).setZero();
+
+          ce_new.col(3).setZero();
+          ce_new.col(4).setZero();
+          ce_new.col(5).setZero();
+        }
+
+        if(thrcntvalue[2] < 0.2){
+          // setting the cols related to Fl to zero since it is not on the ground
+          // cout << "HL on not ground" << endl;
+
+          hess_new.col(6).setZero();
+          hess_new.col(7).setZero();
+          hess_new.col(8).setZero();
+
+          ce_new.col(6).setZero();
+          ce_new.col(7).setZero();
+          ce_new.col(8).setZero();
+        }
+
+        if(thrcntvalue[3] < 0.2){
+          // setting the cols related to Fl to zero since it is not on the ground
+          // cout << "HR on ground" << endl;
+
+          hess_new.col(9).setZero();
+          hess_new.col(10).setZero();
+          hess_new.col(11).setZero();
+
+          ce_new.col(9).setZero();
+          ce_new.col(10).setZero();
+          ce_new.col(11).setZero();
+        }
+
+
+        // regularizing hessian
+        hess_new += reg;
+
+        qp.solve(hess_new, g0, ce_new, ce0, ci, ci0);
+        end_forces = qp.result();
+
+      }
+      else{
+        // all legs are off the ground. Can not control the COM
+        end_forces.setZero();
+      }
     }
+
     else {
-      // all legs are off the ground. Can not control the COM
       // cout << "not set" << endl;
       end_forces.setZero();
     }

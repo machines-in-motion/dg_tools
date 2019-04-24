@@ -13,7 +13,6 @@ namespace dg = dynamicgraph;
 
 /*QP */
 
-#include <tsid/solvers/eiquadprog-fast.hpp>
 // eigen-quadprog
 #include <eigen-quadprog/QuadProg.h>
 /* SOT */
@@ -79,6 +78,7 @@ namespace dynamicgraph{
         // SignalPtr<dg::Vector, int> ce0SIN;
         SignalPtr<dg::Matrix, int> ciSIN;
         SignalPtr<dg::Vector, int> ci0SIN;
+        SignalPtr<dg::Matrix, int> regSIN;
 
         SignalTimeDependent<dg::Vector, int> controlSOUT;
         SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
@@ -117,11 +117,12 @@ namespace dynamicgraph{
 
         dg::Vector ce0;
         dg::Vector end_forces;
-        // dg::Matrix ci;
-        // dg::Vector ci0;
+        dg::Matrix hess_new; // modified based on which foor is on the ground
+        dg::Vector g0_new; // modified based on which foot is on the ground
+        dg::Matrix ce_new; // modified based on which foot is on the ground
+        dg::Matrix ci_new; // modified based on which foot is on the ground
 
 
-        tsid::solvers::EiquadprogFast m_solver;
 
         Eigen::QuadProgDense qp;
 
