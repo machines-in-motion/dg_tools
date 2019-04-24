@@ -14,7 +14,8 @@ namespace dg = dynamicgraph;
 /*QP */
 
 #include <tsid/solvers/eiquadprog-fast.hpp>
-
+// eigen-quadprog
+#include <eigen-quadprog/QuadProg.h>
 /* SOT */
 #include <dynamic-graph/signal-time-dependent.h>
 #include <dynamic-graph/signal-ptr.h>
@@ -67,6 +68,7 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> feedforwardforceSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> feedforwardtorquesSIN;
         SignalPtr<dg::Vector, int> cntsensorSIN;
+        SignalPtr<dg::Vector, int> thrcntvalueSIN; // thresholded contact sensor
         SignalPtr<dg::Vector, int> lqrerrorSIN;
         SignalPtr<dg::Vector, int> lqrgainSIN;
         SignalPtr<dg::Vector, int> lctrlSIN;
@@ -114,11 +116,14 @@ namespace dynamicgraph{
         float w2;
 
         dg::Vector ce0;
+        dg::Vector end_forces;
         // dg::Matrix ci;
         // dg::Vector ci0;
 
 
         tsid::solvers::EiquadprogFast m_solver;
+
+        Eigen::QuadProgDense qp;
 
         Eigen::Quaternion<double> ori_quat;
         Eigen::Quaternion<double> des_ori_quat;

@@ -46,6 +46,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,desiredangvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_angvel")
   ,feedforwardtorquesSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fft")
   ,cntsensorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::cnt_sensor")
+  ,thrcntvalueSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::thr_cnt_value")
   ,lqrerrorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_error")
   ,lqrgainSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lqr_gain")
   ,lctrlSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::lctrl")
@@ -79,7 +80,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                       lctrlSIN << actrlSIN << hessSIN << g0SIN << ceSIN
                       << ciSIN << ci0SIN,
                     "ComImpedanceControl("+name+")::output(vector)::wbctrl")
-  ,isbiasset(1)
+  ,isbiasset(0)
   ,safetyswitch(0)
   ,init_flag_pos(1)
   ,init_flag_vel(1)
@@ -91,7 +92,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
     << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT <<
     oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredangvelSIN
-    << feedforwardtorquesSIN
+    << feedforwardtorquesSIN << thrcntvalueSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
     << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN <<
     wbcontrolSOUT
@@ -153,70 +154,24 @@ dynamicgraph::Vector& ComImpedanceControl::
     // cout << "isbiasset" << isbiasset << endl;
     if (isbiasset){
       if(!safetyswitch){
-
         /*---------- computing position error ----*/
         pos_error.array() = des_pos.array() - position.array();
         vel_error.array() = des_vel.array() - velocity.array();
-
-        /*------------safety checks---------------*/
-        // if (pos_error[0] > 0.4 || pos_error[0] < -0.4){
-        //   cout << "pos_error[0] exceeded limit..." << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
-        // else if (pos_error[2] > 0.32 || pos_error[2] < -0.32){
-        //   cout << "pos_error[2] exceeded limit..." << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
-        //
-        // if (vel_error[0] > 2.0 || vel_error[0] < -2.5){
-        //   cout << "vel_error[0] exceeded limit..." << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
-        //
-        // else if (vel_error[2] > 2.0 || vel_error[2] < -2.5){
-        //   cout << "vel_error[2] exceeded limit..." << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
-
         /*---------- computing tourques ----*/
 
         tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
                       + vel_error.array()*Kd.array());
-        // tau.array() = pos_error.array()*Kp.array();
 
-        /*------------safety checks---------------*/
-        // if(tau[0] > 2.0* 9.81*mass[0]){
-        //   cout << "tau[0] above limit" << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
-        //
-        // else if (tau[2] > 6.0*9.81*mass[2]){
-        //   cout << "tau[2] above limit" << endl;
-        //   cout << "going to safety mode" << endl;
-        //   safetyswitch = 0;
-        // }
 
         tau[1] = 0.0;
       }
-      // else if (safetyswitch){
-      //   // cout << "in safety switch" << endl;
-      //   tau[0] = 0;
-      //   tau[1] = 0;
-      //   tau[2] = 9.81*mass[2];
-      // }
+
     }
     else{
       // quick hack to return zeros
-      // cout << "bias is not set" << endl;
+
       tau.array() = des_pos.array() - des_pos.array();
     }
-
-    // cout << "tau array is" << tau[2] << endl;
 
     sotDEBUGOUT(15);
 
@@ -239,6 +194,7 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     if (isbiasset){
       /*----- assertions of sizes -------------*/
+
       assert(Kp_ang.size() == 3);
       assert(Kd_ang.size() == 3);
       assert(des_ori.size() == 4);
@@ -287,6 +243,7 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     // cout << ang_tau[1] << endl;
 
+
     sotDEBUGOUT(15);
     return angtau;
   }
@@ -304,26 +261,47 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Matrix& hess = hessSIN(t);
     const dynamicgraph::Vector& g0 = g0SIN(t);
     const dynamicgraph::Matrix& ce = ceSIN(t);
-    // dynamicgraph::Vector& ce0 = ce0SIN(t);
     const dynamicgraph::Matrix& ci = ciSIN(t);
     const dynamicgraph::Vector& ci0 = ci0SIN(t);
+    // const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
 
-    ce0.resize(6);
+
     end_forces.resize(18);
+    // assert(thrcntvalue.size()==4);
 
-    /******* setting up the QP *************************/
+    if(isbiasset){
+      ce0.resize(6);
 
-    ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
-    ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+      // cout << "started " << endl;
+      assert(lctrl.size()==3);
+      assert(actrl.size()==3);
+      assert(g0.size()== 18);
+      assert(ce0.size()==6);
 
-    m_solver.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
+      /******* setting up the QP *************************/
 
-    // cout << "FL" << end_forces[2] << endl;
-    // cout << "FR" << end_forces[5] << endl;
-    // cout << "HL" << end_forces[8] << endl;
-    // cout << "HR" << end_forces[11] << endl;
+      ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
+      ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+
+      /******** setting elements of matrix to zero when foot is not
+      ********* on the ground ***********************************************/
+
+      qp.problem(18, 6, 6);
+      qp.solve(hess, g0, ce, ce0, ci, ci0);
+      // m_solver.solve_quadprog(hess, g0, ce, ce0, ci, ci0, end_forces);
+
+      end_forces = qp.result();
+      // end_forces.setZero();
 
 
+    }
+    else {
+      // all legs are off the ground. Can not control the COM
+      // cout << "not set" << endl;
+      end_forces.setZero();
+    }
+
+    // cout << end_forces.array() << endl;
 
     return end_forces;
 
