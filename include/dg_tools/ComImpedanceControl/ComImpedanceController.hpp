@@ -6,6 +6,9 @@
 #ifndef __SOT_com_impedance_Control_HH__
 #define  __SOT_com_impedance_Control_HH__
 
+/* Math */
+
+#include <math.h>
 
 /* Matrix */
 #include <dynamic-graph/linear-algebra.h>
@@ -56,14 +59,14 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> desiredpositionSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> biasedpositionSIN;
         SignalPtr<dg::Vector, int> velocitySIN; // is a 3d vector
-        SignalPtr<dg::Vector, int> desiredvelocitySIN; // is a 3d vector
+        SignalPtr<dg::Vector, int> desiredlmomSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> biasedvelocitySIN;
         SignalPtr<dg::Vector, int> inertiaSIN;
         SignalPtr<dg::Vector, int> massSIN;
         SignalPtr<dg::Vector, int> oriSIN; //base orientation 4d vector quaternion
         SignalPtr<dg::Vector, int> desoriSIN; //base orientation 4d vector quaternion
         SignalPtr<dg::Vector, int> angvelSIN;
-        SignalPtr<dg::Vector, int> desiredangvelSIN;
+        SignalPtr<dg::Vector, int> desiredamomSIN;
         SignalPtr<dg::Vector, int> feedforwardforceSIN; // is a 3d vector
         SignalPtr<dg::Vector, int> feedforwardtorquesSIN;
         SignalPtr<dg::Vector, int> cntsensorSIN;
@@ -80,6 +83,10 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> ci0SIN;
         SignalPtr<dg::Matrix, int> regSIN;
 
+        /// for balancing taks on a planck
+        SignalPtr<dg::Vector, int> leglengthflSIN;
+        SignalPtr<dg::Vector, int> leglengthhlSIN;
+
         SignalTimeDependent<dg::Vector, int> controlSOUT;
         SignalTimeDependent<dg::Vector, int> angcontrolSOUT;
         SignalTimeDependent<dg::Vector, int> SetPosBiasSOUT;
@@ -87,7 +94,8 @@ namespace dynamicgraph{
         SignalTimeDependent<dg::Vector, int> ThrCntSensorSOUT;
         SignalTimeDependent<dg::Vector, int> lqrcontrolSOUT;
         SignalTimeDependent<dg::Vector, int> wbcontrolSOUT; //whole body control
-
+        // for balancing on a planck
+        SignalTimeDependent<dg::Vector, int> descomposSOUT;
 
 
       protected:
@@ -101,9 +109,11 @@ namespace dynamicgraph{
         dg::Vector& threshold_cnt_sensor(dg::Vector& thr_cnt_sensor, int t);
         dg::Vector& return_lqr_tau( dg::Vector& lqrtau, int t);
         dg::Vector& compute_end_eff_forces( dg::Vector & end_forces, int t);
+        dg::Vector& compute_des_com_pos( dg::Vector & des_com_pos, int t);
+
 
         dg::Vector pos_error;
-        dg::Vector vel_error;
+        dg::Vector lmom_error;
         dg::Vector h_error;
         dg::Vector ori_error;
 
@@ -134,6 +144,10 @@ namespace dynamicgraph{
         Eigen::Matrix<double, 3, 3> ori_se3;
         Eigen::Matrix<double, 3, 3> des_ori_se3;
         Eigen::Matrix<double, 3, 3> ori_error_se3; // refer to christian ott paper for definitions (Rdb)
+
+        // for balncing task
+        dg::Vector diff;
+
 
         int init_flag_pos;
         int init_flag_vel;

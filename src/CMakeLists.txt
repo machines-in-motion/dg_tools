@@ -7,6 +7,7 @@ set(lib_name dg_tools)
 # NOTE: in sot-core, these are set as plugins.
 set(cpp_source_files
   ComImpedanceControl/ComImpedanceController.cpp
+  ComImpedanceControl/reactive_lqr_controller.cpp
   test_stand_control/power_jump.cpp
   control/control_pd.cpp
   control/calibrator.cpp

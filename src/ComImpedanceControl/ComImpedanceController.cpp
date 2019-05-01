@@ -30,7 +30,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,desiredpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_pos")
   ,biasedpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_pos")
   ,velocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::velocity")
-  ,desiredvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_vel")
+  ,desiredlmomSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_lmom")
   ,biasedvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_vel")
   ,feedforwardforceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fff")
   ,inertiaSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::inertia")
@@ -38,7 +38,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,oriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ori")
   ,desoriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_ori")
   ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::angvel")
-  ,desiredangvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_angvel")
+  ,desiredamomSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_amom")
   ,feedforwardtorquesSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fft")
   ,cntsensorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::cnt_sensor")
   ,thrcntvalueSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::thr_cnt_value")
@@ -53,14 +53,15 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,ciSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::ci")
   ,ci0SIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ci0")
   ,regSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::reg")
-
+  ,leglengthflSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_fl")
+  ,leglengthhlSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_hl")
 
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-                velocitySIN << desiredvelocitySIN << feedforwardforceSIN ,
+                velocitySIN << desiredlmomSIN << feedforwardforceSIN ,
                 "ComImpedanceControl("+name+")::output(vector)::tau")
   ,angcontrolSOUT( boost::bind(&ComImpedanceControl::return_angcontrol_torques, this, _1,_2),
-                  KpSIN << KdSIN << inertiaSIN <<angvelSIN << desiredangvelSIN
+                  KpSIN << KdSIN << inertiaSIN <<angvelSIN << desiredamomSIN
                   << feedforwardtorquesSIN,
                     "ComImpedanceControl("+name+")::output(vector)::angtau")
   ,SetPosBiasSOUT( boost::bind(&ComImpedanceControl::set_pos_bias, this, _1,_2),
@@ -76,6 +77,11 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
                       lctrlSIN << actrlSIN << hessSIN << g0SIN << ceSIN
                       << ciSIN << ci0SIN,
                     "ComImpedanceControl("+name+")::output(vector)::wbctrl")
+  ,descomposSOUT( boost::bind(&ComImpedanceControl::compute_des_com_pos, this, _1, _2),
+                      leglengthflSIN << leglengthhlSIN,
+                    "ComImpedanceControl("+name+")::output(vector)::compute_des_com_pos")
+
+
   ,isbiasset(0)
   ,safetyswitch(0)
   ,init_flag_pos(1)
@@ -86,12 +92,12 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   Entity::signalRegistration(
     positionSIN << velocitySIN << SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN <<
     biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
-    << ThrCntSensorSOUT << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT <<
-    oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredangvelSIN
+    << ThrCntSensorSOUT << desiredlmomSIN << feedforwardforceSIN <<  controlSOUT <<
+    oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredamomSIN
     << feedforwardtorquesSIN << thrcntvalueSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
     << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN <<
-    wbcontrolSOUT
+    wbcontrolSOUT << leglengthflSIN << leglengthhlSIN << descomposSOUT
   );
 }
 
@@ -134,7 +140,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& position = biasedpositionSIN(t);
     const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
     const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
-    const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
+    const dynamicgraph::Vector& des_lmom = desiredlmomSIN(t);
     const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
     const dynamicgraph::Vector& mass = massSIN(t);
 
@@ -144,7 +150,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     assert(position.size() == 3);
     assert(des_pos.size() == 3);
     assert(velocity.size() == 3);
-    assert(des_vel.size() == 3);
+    assert(des_lmom.size() == 3);
     assert(des_fff.size() == 3);
 
     // cout << "isbiasset" << isbiasset << endl;
@@ -152,11 +158,11 @@ dynamicgraph::Vector& ComImpedanceControl::
       if(!safetyswitch){
         /*---------- computing position error ----*/
         pos_error.array() = des_pos.array() - position.array();
-        vel_error.array() = des_vel.array() - velocity.array();
+        lmom_error.array() = des_lmom.array() - mass.array() * velocity.array();
         /*---------- computing tourques ----*/
 
-        tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
-                      + vel_error.array()*Kd.array());
+        tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array())
+                      + lmom_error.array()*Kd.array();
 
 
         tau[1] = 0.0;
@@ -185,7 +191,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& des_ori = desoriSIN(t);
     const dynamicgraph::Vector& ori = oriSIN(t);
     const dynamicgraph::Vector& omega = angvelSIN(t);
-    const dynamicgraph::Vector& omega_des = desiredangvelSIN(t);
+    const dynamicgraph::Vector& amom_des = desiredamomSIN(t);
     const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
 
     if (isbiasset){
@@ -196,7 +202,7 @@ dynamicgraph::Vector& ComImpedanceControl::
       assert(des_ori.size() == 4);
       assert(ori.size() == 4);
       assert(omega.size() == 3);
-      assert(omega_des.size() == 3);
+      assert(amom_des.size() == 3);
       assert(hd_des.size()==3);
       assert(inertia.size()==3);
 
@@ -224,7 +230,7 @@ dynamicgraph::Vector& ComImpedanceControl::
       ori_error[2] = -2.0*(ori_error_quat.vec()[2] + ori_error_quat.w())*ori_error_quat.vec()[2] * Kp_ang[2];
 
       /*---------- computing ang error ----*/
-      h_error.array() = inertia.array()*(omega.array() - omega_des.array());
+      h_error.array() = inertia.array()*omega.array() - amom_des.array();
 
       angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
 
@@ -367,6 +373,38 @@ dynamicgraph::Vector& ComImpedanceControl::
 
   }
 
+dynamicgraph::Vector& ComImpedanceControl::
+  compute_des_com_pos(dynamicgraph::Vector& des_com_pos, int t){
+    // this computes the desired com position to balance a planck with force control
+
+    sotDEBUGIN(15);
+
+    const dynamicgraph::Vector& leg_length_fl = leglengthflSIN(t);
+    const dynamicgraph::Vector& leg_length_hl = leglengthhlSIN(t);
+
+    assert(leg_length_fl.size() == 6);
+    assert(leg_length_hl.size() == 6);
+
+    des_com_pos.resize(3);
+    des_com_pos[1] = 0;
+    des_com_pos[2] = 0.2;
+
+    diff.resize(3);
+    diff[2] = leg_length_fl[2] - leg_length_hl[2];
+    diff[0] = leg_length_fl[0] - leg_length_hl[0] + 0.42;
+    diff[1] = 0;
+
+    des_com_pos[0] = 0.1*atan(diff[2]/diff[0]);
+
+    // cout << des_com_pos[0] << endl;
+
+    sotDEBUGOUT(15);
+    return des_com_pos;
+  }
+
+
+
+
 
 dynamicgraph::Vector& ComImpedanceControl::
   set_pos_bias(dynamicgraph::Vector& pos_bias, int t){
@@ -405,6 +443,8 @@ dynamicgraph::Vector& ComImpedanceControl::
         pos_bias[i] = position_bias[i];
       }
     }
+
+    pos_bias[2] = 0.0;
 
     sotDEBUGOUT(15);
     return pos_bias;
