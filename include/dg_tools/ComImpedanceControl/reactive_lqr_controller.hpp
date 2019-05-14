@@ -72,17 +72,18 @@ namespace dynamicgraph{
         double TimeStep;
         double& setsize(int dimension);
 
-        void compute_dyn_(Eigen::Vector3d com_pos, Eigen::Vector3d com_ang_vel, Eigen::Quaternion<double> ori,
-                         Eigen::VectorXd end_eff_pos_12d, Eigen::Vector4d cnt_value, double mass,
+        Eigen::VectorXd compute_dyn_(Eigen::Vector3d com_pos, Eigen::Vector3d com_vel, Eigen::Quaternion<double> ori, Eigen::Vector3d com_ang_vel,
+                         Eigen::VectorXd end_eff_pos_12d, Eigen::VectorXd des_fff, Eigen::Vector4d cnt_value, double mass,
                         Eigen::MatrixXd inertia, Eigen::MatrixXd& A_t, Eigen::MatrixXd& B_t);
         void compute_lin_dyn_(Eigen::MatrixXd lin_A_t, Eigen::MatrixXd lin_B_t);
         void compute_num_lin_dyn_(
                   Eigen::Vector3d com_pos_t, Eigen::VectorXd com_vel, Eigen::Vector3d com_ang_vel_t,
                   Eigen::Quaternion<double> ori_t, Eigen::VectorXd end_eff_pos_12d_t,
                   Eigen::Vector4d cnt_value_t,
-                  Eigen::Vector3d com_pos_t1, Eigen::Vector3d com_ang_vel_t1, Eigen::Quaternion<double> ori_t1,
+                  Eigen::Vector3d com_pos_t1, Eigen::Vector3d com_vel_t1, Eigen::Vector3d com_ang_vel_t1,
+                  Eigen::Quaternion<double> ori_t1,
                   Eigen::VectorXd end_eff_pos_12d_t1, Eigen::Vector4d cnt_value_t1,
-                  Eigen::VectorXd u, double mass, Eigen::MatrixXd inertia,
+                  Eigen::VectorXd des_fff, double mass, Eigen::MatrixXd inertia,
                   Eigen::MatrixXd& lin_A_t, Eigen::MatrixXd& lin_B_t);
 
 
@@ -108,6 +109,10 @@ namespace dynamicgraph{
         Eigen::MatrixXd B_t1; // t+1 step
         Eigen::VectorXd x;
         Eigen::VectorXd unit_vec;
+        Eigen::Vector3d com_pos_pd; // Partial derivative
+        Eigen::Vector3d com_vel_pd;
+        Eigen::Vector3d com_ang_vel_pd;
+        Eigen::Quaternion<double> com_ori_pd;
 
 
         // dynamic grpah signal
@@ -129,15 +134,18 @@ namespace dynamicgraph{
         Eigen::VectorXd des_fff_t;
         Eigen::VectorXd cnt_value_t;
         Eigen::VectorXd end_eff_pos_12d_t;
+        Eigen::VectorXd xd_t;
 
 
         // next timestep
         Eigen::VectorXd com_pos_t1;
+        Eigen::VectorXd com_vel_t1;
         Eigen::VectorXd com_ang_vel_t1;
         Eigen::Quaternion<double> com_ori_t1;
         Eigen::VectorXd des_fff_t1;
         Eigen::VectorXd cnt_value_t1;
         Eigen::VectorXd end_eff_pos_12d_t1;
+        Eigen::VectorXd xd_t1;
 
         Eigen::MatrixXd lin_A_ht;
         Eigen::MatrixXd lin_B_ht;

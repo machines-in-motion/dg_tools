@@ -78,9 +78,9 @@ MatrixXd ReactiveLQRController::
 
 
 
-void ReactiveLQRController::
-  compute_dyn_(Vector3d com_pos, Vector3d com_ang_vel, Quaternion<double> ori, VectorXd end_eff_pos_12d,
-              Vector4d cnt_value, double mass, MatrixXd inertia ,MatrixXd& A_t, MatrixXd& B_t){
+VectorXd ReactiveLQRController::
+  compute_dyn_(Vector3d com_pos, Vector3d com_vel,  Quaternion<double> ori, Vector3d com_ang_vel, VectorXd end_eff_pos_12d,
+              VectorXd des_fff, Vector4d cnt_value, double mass, MatrixXd inertia ,MatrixXd& A_t, MatrixXd& B_t){
     //computes dynamic for the urrent time step
     // xd = A_t * X + B_t*U
 
@@ -90,6 +90,7 @@ void ReactiveLQRController::
     A_t.resize(13,13);
     B_t.resize(13,12);
     R_cross_mat.resize(3,3);
+    x.resize(13);
 
     // cout << "asserting in dyn computation" << endl;
 
@@ -109,7 +110,7 @@ void ReactiveLQRController::
     // cout << "completed defining omega ..." << endl;
     A_t << Matrix::Zero(3,3), Matrix::Identity(3,3), Matrix::Zero(3,4), Matrix::Zero(3,3),
            Matrix::Zero(3,3), Matrix::Zero(3,3), Matrix::Zero(3,4), Matrix::Zero(3,3),
-           Matrix::Zero(4,3), Matrix::Zero(4,3), omega, Matrix::Zero(4,3),
+           Matrix::Zero(4,3), Matrix::Zero(4,3),    0.5*omega,      Matrix::Zero(4,3),
            Matrix::Zero(3,3), Matrix::Zero(3,3), Matrix::Zero(3,4), Matrix::Zero(3,3);
 
     // cout << "completed defining A" << endl;
@@ -119,7 +120,6 @@ void ReactiveLQRController::
                           0.0, 0.0,  1/mass ;
 
     // cout << "completed defining mass matrix" << endl;
-
 
     inertia_global_inv = (ori.toRotationMatrix() * inertia * ori.toRotationMatrix().transpose()).inverse();
 
@@ -136,6 +136,17 @@ void ReactiveLQRController::
            Matrix::Zero(4,3), Matrix::Zero(4,3), Matrix::Zero(4,3), Matrix::Zero(4,3),
            cnt_value(0) * R_cross_mat_fl , cnt_value(1) * R_cross_mat_fr, cnt_value(2) * R_cross_mat_hl, cnt_value(3) * R_cross_mat_hr;
 
+   // cout << B_t << "\n\n\n" <<endl;
+
+
+   x << com_pos(0), com_pos(1), com_pos(2), com_vel(0), com_vel(1), com_vel(2),
+        ori.vec()[0], ori.vec()[1], ori.vec()[2], ori.w(), com_ang_vel(0), com_ang_vel(1), com_ang_vel(2);
+
+
+    return A_t * x + B_t * des_fff;
+
+
+
   }
 
 
@@ -150,41 +161,59 @@ void ReactiveLQRController::
   compute_num_lin_dyn_(
           Vector3d com_pos_t, VectorXd com_vel_t, Vector3d com_ang_vel_t,
           Quaternion<double> ori_t, VectorXd end_eff_pos_12d_t, Vector4d cnt_value_t,
-          Vector3d com_pos_t1, Vector3d com_ang_vel_t1, Quaternion<double> ori_t1,
+          Vector3d com_pos_t1, Vector3d com_vel_t1, Vector3d com_ang_vel_t1, Quaternion<double> ori_t1,
           VectorXd end_eff_pos_12d_t1, Vector4d cnt_value_t1,
-          VectorXd u, double mass, MatrixXd inertia,
+          VectorXd des_fff, double mass, MatrixXd inertia,
           MatrixXd& lin_A_t, MatrixXd& lin_B_t){
   // computes the linearized A and B using numerical differentiation
 
 
     // should be put inside an init flag
-      x.resize(13);
       unit_vec.resize(13);
       lin_A_t.resize(13,13);
       lin_B_t.resize(13,12);
 
-      this->compute_dyn_(com_pos_t,com_ang_vel_t,ori_t,end_eff_pos_12d_t,cnt_value_t,
+      xd_t = this->compute_dyn_(com_pos_t, com_vel_t, ori_t, com_ang_vel_t, end_eff_pos_12d_t, des_fff, cnt_value_t,
                         mass, inertia, A_t, B_t);
-      this->compute_dyn_(com_pos_t1,com_ang_vel_t1,ori_t1,end_eff_pos_12d_t1,cnt_value_t1,
-                        mass, inertia, A_t1, B_t1);
-      // cout << "completed computing dynamics of t and t+1 " << endl;
-
-      // x << 0, 0, 0, 0,0,0,0,0,0,0,0,0,0;
-      x << com_pos_t(0), com_pos_t(1), com_pos_t(2), com_vel_t(0), com_vel_t(1), com_vel_t(2),
-           ori_t.vec()[0], ori_t.vec()[1], ori_t.vec()[2], ori_t.w(), com_ang_vel_t(0), com_ang_vel_t(1), com_ang_vel_t(2);
-
-     unit_vec << 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0;
-
+     //
       // cout << "completed defining state vector" << endl;
       // lin_A = (dA/dx)*X^T + A + (dB/dx)*U^T
-      // lin_B = B
-      lin_A_t = A_t;
-      //
+
+     // diffrentiating with repect to com_pos_x
+     for(int i = 0; i < 3; i ++){
+       com_pos_pd = com_pos_t;
+       com_pos_pd(i) = com_pos_t1(i);
+       lin_A_t.col(i) = (1/(com_pos_t1(i) - com_pos_t(i)))*(this->compute_dyn_(com_pos_pd,com_vel_t, ori_t, com_ang_vel_t, end_eff_pos_12d_t, des_fff, cnt_value_t,
+                         mass, inertia, A_t, B_t) - xd_t);
+
+        com_vel_pd = com_vel_t;
+        com_vel_pd(i) = com_vel_t1(i);
+        lin_A_t.col(i+3) = (1/(com_vel_t1(i) - com_vel_t(i)))*(this->compute_dyn_(com_pos_t,com_vel_pd, ori_t, com_ang_vel_t, end_eff_pos_12d_t, des_fff, cnt_value_t,
+                        mass, inertia, A_t, B_t) - xd_t);
+
+        com_ori_pd = ori_t;
+        com_ori_pd.vec()[i] = ori_t1.vec()[i];
+        lin_A_t.col(i + 6) = (1/(ori_t1.vec()[i] - ori_t.vec()[i]))*(this->compute_dyn_(com_pos_t,com_vel_t, com_ori_pd, com_ang_vel_t, end_eff_pos_12d_t, des_fff, cnt_value_t,
+                          mass, inertia, A_t, B_t) - xd_t);
+
+        com_ang_vel_pd = com_ang_vel_t;
+        com_ang_vel_pd(i) = com_ang_vel_t1(i);
+        lin_A_t.col(i+10) = (1/(com_ang_vel_t1(i) - com_ang_vel_t(i)))*(this->compute_dyn_(com_pos_t,com_vel_t, ori_t, com_ang_vel_pd, end_eff_pos_12d_t, des_fff, cnt_value_t,
+                        mass, inertia, A_t, B_t) - xd_t);
+
+      }
+
+      com_ori_pd = ori_t;
+      com_ori_pd.w() = ori_t1.w();
+      lin_A_t.col(9) = (1/(ori_t1.w() - ori_t.w()))*(this->compute_dyn_(com_pos_t,com_vel_t, com_ori_pd, com_ang_vel_t, end_eff_pos_12d_t, des_fff, cnt_value_t,
+                        mass, inertia, A_t, B_t) - xd_t);
+
+
       // cout << "completed computing lin_A" << endl;
       //
       lin_B_t = B_t;
 
-      // cout << lin_A_t << endl;
+      // cout << lin_B_t << "\n\n\n" << endl;
       // cout << lin_B_t << endl;
 
 
@@ -202,7 +231,7 @@ void ReactiveLQRController::
       // cout << K << endl;
       P = Q + K.transpose()*R*K + (lin_A + lin_B*K).transpose() * P_prev * (lin_A + lin_B*K);
 
-      cout << K << endl;
+      // cout << ((R + lin_B.transpose() * P_prev * lin_B).inverse()) * lin_B.transpose() * P_prev * lin_A  << "\n\n\n\n"<< endl;
 
 
   }
@@ -260,6 +289,7 @@ dynamicgraph::Matrix& ReactiveLQRController::
       cnt_value_t = cnt_value.segment(4*(horizon[0] - h), 4);
 
       com_pos_t1 = com_pos.segment(3*(horizon[0]-h+1), 3);
+      com_vel_t1 = com_vel.segment(3*(horizon[0]-h+1), 3);
       com_ang_vel_t1 = com_ang_vel.segment(3*(horizon[0]-h+1), 3);
       ori_tmp = com_ori.segment(4*(horizon[0]-h+1), 4);
       com_ori_t1.w() = ori_tmp[3];
@@ -270,37 +300,25 @@ dynamicgraph::Matrix& ReactiveLQRController::
       //
       des_fff_t = des_fff_12d.segment(12*(horizon[0]- h), 12);
 
-      // this->compute_dyn_(com_pos_t, com_ang_vel_t, com_ori_t, end_eff_pos_12d_t, cnt_value_t,
+      // xd_t = this->compute_dyn_(com_pos_t, com_ang_vel_t, com_ori_t, com_ang_vel_t, end_eff_pos_12d_t, des_fff_t, cnt_value_t,
       //                     mass[0], inertia, A_t, B_t);
 
-
       this->compute_num_lin_dyn_(com_pos_t, com_vel_t, com_ang_vel_t, com_ori_t, end_eff_pos_12d_t, cnt_value_t,
-                                 com_pos_t1, com_ang_vel_t1, com_ori_t1, end_eff_pos_12d_t1, cnt_value_t1,
+                                 com_pos_t1, com_vel_t1, com_ang_vel_t1, com_ori_t1, end_eff_pos_12d_t1, cnt_value_t1,
                                  des_fff_t, mass[0], inertia, lin_A_ht, lin_B_ht);
-
-      this->compute_lqr_gains_(Q, R, lin_A_ht, lin_B_ht, P_prev, P, K );
       //
-
+      this->compute_lqr_gains_(Q, R, lin_A_ht, lin_B_ht, P_prev, P, K );
+      // //
+      //
       P_prev = P;
+      // cout << P_prev << "\n\n\n" <<endl;
 
 
     }
 
-    // robot_values
-
-
-    // com_pos_t1 = com_pos.segment(0, 3);
-    // com_ang_vel_t1 = com_ang_vel.segment(0, 3);
-    // ori_tmp = com_ori.segment(0, 4);
-    // com_ori_t1.w() = ori_tmp[3];
-    // com_ori_t1.vec() = ori_tmp.segment(0,3);
-    // end_eff_pos_12d_t1 = end_eff_pos_12d.segment(0, 12);
-    // cnt_value_t1 = cnt_value.segment(0, 4);
-
-
-
-
     lqr_gains = K;
+
+    cout << K << "\n\n\n" << endl;
 
     // lqr_gains = Matrix::Zero(12,13);
 

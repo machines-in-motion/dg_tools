@@ -49,9 +49,10 @@ PowerJumpControl::PowerJumpControl(const std::string &name)
     Entity::signalRegistration(
       leg_lengthSIN << cnt_sensorSIN << leg_length_airSIN << leg_length_triggerSIN
       << des_fffSIN << des_weight_fffSIN << return_des_posSOUT << return_des_forceSOUT
-      << return_des_kpSOUT
+      << kp_groundSIN << kp_airSIN << return_des_kpSOUT
     );
   }
+
 
 dynamicgraph::Vector& PowerJumpControl::
   return_des_pos( dynamicgraph::Vector &des_pos, int t){
@@ -67,7 +68,7 @@ dynamicgraph::Vector& PowerJumpControl::
 
     des_pos.resize(6);
 
-    if (cnt_sensor[0] > .1){
+    if (cnt_sensor[0] < .2){
       if (pos_trigger_flag_){
         if (leg_length[0] > leg_length_trigger[0]){
           // going to desired position before pushing of the ground
@@ -106,7 +107,7 @@ dynamicgraph::Vector& PowerJumpControl::
 
     des_force.resize(6);
 
-    if (cnt_sensor[0] > 0.1){
+    if (cnt_sensor[0] < 0.2){
       if (force_trigger_flag_){
         if (leg_length[0] > leg_length_trigger[0]){
           // going to desired position before pushing of the ground
@@ -149,7 +150,7 @@ dynamicgraph::Vector& PowerJumpControl::
 
     des_kp.resize(6);
 
-    if (cnt_sensor[0] > 0.1){
+    if (cnt_sensor[0] < 0.2){
       if (kp_trigger_flag_){
         if (leg_length[0] > leg_length_trigger[0]){
           // going to desired position before pushing of the ground

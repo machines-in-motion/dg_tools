@@ -30,7 +30,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,desiredpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_pos")
   ,biasedpositionSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_pos")
   ,velocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::velocity")
-  ,desiredlmomSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_lmom")
+  ,desiredvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_vel")
   ,biasedvelocitySIN(NULL, "ComImpedanceControl("+name+")::input(vector)::biased_vel")
   ,feedforwardforceSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fff")
   ,inertiaSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::inertia")
@@ -38,7 +38,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,oriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::ori")
   ,desoriSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_ori")
   ,angvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::angvel")
-  ,desiredamomSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_amom")
+  ,desiredangvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_ang_vel")
   ,feedforwardtorquesSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::des_fft")
   ,cntsensorSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::cnt_sensor")
   ,thrcntvalueSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::thr_cnt_value")
@@ -55,13 +55,14 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,regSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::reg")
   ,leglengthflSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_fl")
   ,leglengthhlSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_hl")
+  ,absendeffvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::abs_end_eff_vel")
 
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-                velocitySIN << desiredlmomSIN << feedforwardforceSIN ,
+                velocitySIN << desiredvelocitySIN << feedforwardforceSIN ,
                 "ComImpedanceControl("+name+")::output(vector)::tau")
   ,angcontrolSOUT( boost::bind(&ComImpedanceControl::return_angcontrol_torques, this, _1,_2),
-                  KpSIN << KdSIN << inertiaSIN <<angvelSIN << desiredamomSIN
+                  KpSIN << KdSIN << inertiaSIN <<angvelSIN << desiredangvelSIN
                   << feedforwardtorquesSIN,
                     "ComImpedanceControl("+name+")::output(vector)::angtau")
   ,SetPosBiasSOUT( boost::bind(&ComImpedanceControl::set_pos_bias, this, _1,_2),
@@ -71,11 +72,14 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,ThrCntSensorSOUT( boost::bind(&ComImpedanceControl::threshold_cnt_sensor, this, _1, _2),
                 cntsensorSIN, "ComImpedanceControl("+name+")::output(vector)::thr_cnt_sensor")
   ,lqrcontrolSOUT( boost::bind(&ComImpedanceControl::return_lqr_tau, this, _1,_2),
-                    lqrgainSIN << lqrerrorSIN,
+                    lqrgainSIN,
                    "ComImpedanceControl("+name+")::output(vector)::lqrtau")
+  ,endefflqrcontrolSOUT( boost::bind(&ComImpedanceControl::return_end_eff_lqr_tau, this, _1,_2),
+                     lqrgainSIN,
+                    "ComImpedanceControl("+name+")::output(vector)::end_eff_lqr_tau")
   ,wbcontrolSOUT( boost::bind(&ComImpedanceControl::compute_end_eff_forces, this, _1, _2),
                       lctrlSIN << actrlSIN << hessSIN << g0SIN << ceSIN
-                      << ciSIN << ci0SIN,
+                      << ciSIN << ci0SIN << absendeffvelSIN,
                     "ComImpedanceControl("+name+")::output(vector)::wbctrl")
   ,descomposSOUT( boost::bind(&ComImpedanceControl::compute_des_com_pos, this, _1, _2),
                       leglengthflSIN << leglengthhlSIN,
@@ -91,10 +95,10 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   init(TimeStep);
   Entity::signalRegistration(
     positionSIN << velocitySIN << SetPosBiasSOUT << SetVelBiasSOUT << KpSIN << KdSIN <<
-    biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
-    << ThrCntSensorSOUT << desiredlmomSIN << feedforwardforceSIN <<  controlSOUT <<
-    oriSIN << desoriSIN << angvelSIN << KpAngSIN <<KdAngSIN << inertiaSIN << desiredamomSIN
-    << feedforwardtorquesSIN << thrcntvalueSIN
+    KdAngSIN << KpAngSIN << inertiaSIN << biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
+    << ThrCntSensorSOUT  << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT <<
+    oriSIN << desoriSIN << angvelSIN << desiredangvelSIN << endefflqrcontrolSOUT
+    << feedforwardtorquesSIN << thrcntvalueSIN << absendeffvelSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
     << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN <<
     wbcontrolSOUT << leglengthflSIN << leglengthhlSIN << descomposSOUT
@@ -107,30 +111,225 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     /** This method carries out a matrix multiplication of lqr gains
     obtained from the dynamic planner.
-    lqr_matrix * [[com_error], [lmom_error], [amom_error]] **/
+    lqr_matrix * [[com_error], [lmom_error], [ori_error], [amom_error]] **/
 
     const dynamicgraph::Vector& lqr_vector = lqrgainSIN(t);
-    const dynamicgraph::Vector& lqr_error = lqrerrorSIN(t);
+    const dynamicgraph::Vector& position = biasedpositionSIN(t);
+    const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
+    const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
+    const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
+    const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
+    const dynamicgraph::Vector& des_ori = desoriSIN(t);
+    const dynamicgraph::Vector& ori = oriSIN(t);
+    const dynamicgraph::Vector& omega = angvelSIN(t);
+    const dynamicgraph::Vector& des_omega = desiredangvelSIN(t);
+    const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
 
-    delta_f.resize(12); delta_f.setZero();
-    lqrtau.resize(12);lqrtau.setZero();
-    assert(lqr_vector.size()==108);
-    assert(lqr_error.size()==9);
+    lqrtau.resize(6);lqrtau.setZero();
 
-    /*------ multiplying as a matrix ----------------------*/
-    int index = 0;
-    for(int i = 0; i < 12; i ++){
-      for(int j = 0; j < 9; j ++ ){
-        delta_f[i] = lqr_vector[index]*lqr_error[j];
-        index++;
-      }
-    }
+    assert(lqr_vector.size()==78);
 
-    lqrtau.array() = delta_f.array();
+    /*------- computing delta X -----------------------------*/
+    delta_x.resize(13);
+    lqr_pos_error.array() = position.array() - des_pos.array();
+    lqr_vel_error.array() = velocity.array() - des_vel.array();
+    lqr_ang_vel_error.array() = omega.array() - des_omega.array();
+
+    des_ori_quat.w() = des_ori[3];
+    des_ori_quat.vec()[0] = des_ori[0];
+    des_ori_quat.vec()[1] = des_ori[1];
+    des_ori_quat.vec()[2] = des_ori[2];
+
+    ori_quat.w() = ori[3];
+    ori_quat.vec()[0] = ori[0];
+    ori_quat.vec()[1] = ori[1];
+    ori_quat.vec()[2] = ori[2];
+    //
+    des_ori_se3 = des_ori_quat.toRotationMatrix();
+    ori_se3 = ori_quat.toRotationMatrix();
+    //
+    ori_error_se3 = des_ori_se3.transpose() * ori_se3;
+    ori_error_quat = ori_error_se3;
+
+    lqr_ori_error(0) = ori_error_quat.vec()[0];
+    lqr_ori_error(1) = ori_error_quat.vec()[1];
+    lqr_ori_error(2) = ori_error_quat.vec()[2];
+    lqr_ori_error(3) = ori_error_quat.w();
+
+    delta_x << lqr_pos_error, lqr_vel_error, lqr_ori_error, lqr_ang_vel_error;
+
+    /*--------- reshaping the lqr_vector into a 6*13 matrix ------*/
+
+    K.resize(6,13);
+
+    // cout << lqr_vector << endl;
+
+    K.row(0) = lqr_vector.segment(0,13),
+    K.row(1) = lqr_vector.segment(13,13),
+    K.row(2) = lqr_vector.segment(26,13),
+    K.row(3) = lqr_vector.segment(39,13),
+    K.row(4) = lqr_vector.segment(52,13),
+    K.row(5) = lqr_vector.segment(65,13);
+
+
+
+    // K << -200, 0, 0, -20, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    //       0, 0, -200, 0, 0, -20, 0, 0, 0, 0, 0, 0, 0,
+    //       0, 0, 0, 0, 0, 0, -130, 0, 0, 0, -.5, 0, 0,
+    //       0, 0, 0, 0, 0, 0, 0,-130,0 ,0, 0, -1., 0,
+    //       0, 0, 0, 0, 0, 0, 0, 0, -130,0, 0, 0, -.5;
+
+    // cout << K << "\n" <<endl;
+
+    /**** computing the centroidal forces at current timestep ----*/
+    // F = F* - K*delta_x
+    f_des.resize(6);
+    f_des << des_fff, hd_des;
+
+    lqrtau = f_des + K * delta_x;
+
+    // lqrtau(3) = lqr_ori_error(0) * lqrtau(3);
+    // lqrtau(4) = lqr_ori_error(1) * lqrtau(4);
+    // lqrtau(5) = lqr_ori_error(2) * lqrtau(5);
+
     sotDEBUGOUT(15);
     return lqrtau;
     }
 
+    dynamicgraph::Vector& ComImpedanceControl::
+      return_angcontrol_torques( dynamicgraph::Vector &angtau, int t){
+        sotDEBUGIN(15);
+
+        const dynamicgraph::Vector& Kp_ang = KpAngSIN(t);
+        const dynamicgraph::Vector& Kd_ang = KdAngSIN(t);
+        const dynamicgraph::Vector& inertia = inertiaSIN(t);
+        const dynamicgraph::Vector& des_ori = desoriSIN(t);
+        const dynamicgraph::Vector& ori = oriSIN(t);
+        const dynamicgraph::Vector& omega = angvelSIN(t);
+        const dynamicgraph::Vector& des_omega = desiredangvelSIN(t);
+        const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
+
+        if (isbiasset){
+          /*----- assertions of sizes -------------*/
+
+          assert(Kp_ang.size() == 3);
+          assert(Kd_ang.size() == 3);
+          assert(des_ori.size() == 4);
+          assert(ori.size() == 4);
+          assert(omega.size() == 3);
+          assert(des_omega.size() == 3);
+          assert(hd_des.size()==3);
+          assert(inertia.size()==3);
+
+          des_ori_quat.w() = des_ori[3];
+          des_ori_quat.vec()[0] = des_ori[0];
+          des_ori_quat.vec()[1] = des_ori[1];
+          des_ori_quat.vec()[2] = des_ori[2];
+
+          ori_quat.w() = ori[3];
+          ori_quat.vec()[0] = ori[0];
+          ori_quat.vec()[1] = ori[1];
+          ori_quat.vec()[2] = ori[2];
+
+          des_ori_se3 = des_ori_quat.toRotationMatrix();
+          ori_se3 = ori_quat.toRotationMatrix();
+
+          ori_error_se3 = des_ori_se3.transpose() * ori_se3;
+          ori_error_quat = ori_error_se3;
+
+          //todo: multiply as matrix
+
+          ori_error.resize(3);
+          ori_error[0] = -2.0*(ori_error_quat.vec()[0] + ori_error_quat.w())*ori_error_quat.vec()[0] * Kp_ang[0];
+          ori_error[1] = -2.0*(ori_error_quat.vec()[1] + ori_error_quat.w())*ori_error_quat.vec()[1] * Kp_ang[1];
+          ori_error[2] = -2.0*(ori_error_quat.vec()[2] + ori_error_quat.w())*ori_error_quat.vec()[2] * Kp_ang[2];
+
+          /*---------- computing ang error ----*/
+          h_error.array() = inertia.array()*(omega.array() - des_omega.array());
+
+          angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
+
+        }
+
+        else {
+          angtau.array() = omega.array() - omega.array();
+        }
+
+        /*------------ Safety checks -------*/
+        // if (h_error[])
+
+        // cout << ang_tau[1] << endl;
+
+
+        sotDEBUGOUT(15);
+        return angtau;
+      }
+
+
+
+
+dynamicgraph::Vector& ComImpedanceControl::
+  return_end_eff_lqr_tau( dynamicgraph::Vector &end_eff_lqr_tau, int t){
+
+    /** this method computes the desired forces at the end effector based on the
+    plan using lqr gains computated with orientation control **/
+
+    end_eff_lqr_tau.resize(12);end_eff_lqr_tau.setZero();
+
+    const dynamicgraph::Vector& lqr_vector = lqrgainSIN(t);
+    const dynamicgraph::Vector& position = biasedpositionSIN(t);
+    const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
+    const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
+    const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
+    const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
+    const dynamicgraph::Vector& des_ori = desoriSIN(t);
+    const dynamicgraph::Vector& ori = oriSIN(t);
+    const dynamicgraph::Vector& omega = angvelSIN(t);
+    const dynamicgraph::Vector& des_omega = desiredangvelSIN(t);
+
+
+
+    assert(lqr_vector.size()==156);
+
+    /*------- computing delta X -----------------------------*/
+    delta_x.resize(13);
+    lqr_pos_error.array() = position.array() - des_pos.array();
+    lqr_vel_error.array() = velocity.array() - des_vel.array();
+    lqr_ori_error.array() = ori.array() - des_ori.array();
+    lqr_ang_vel_error.array() = omega.array() - des_omega.array();
+
+    delta_x << lqr_pos_error, lqr_vel_error, lqr_ori_error, lqr_ang_vel_error;
+
+    /*--------- reshaping the lqr_vector into a 6*13 matrix ------*/
+
+    K.resize(12,13);
+
+    // cout << lqr_vector << endl;
+
+    K.row(0) = lqr_vector.segment(0,13),
+    K.row(1) = lqr_vector.segment(13,13),
+    K.row(2) = lqr_vector.segment(26,13),
+    K.row(3) = lqr_vector.segment(39,13),
+    K.row(4) = lqr_vector.segment(52,13),
+    K.row(5) = lqr_vector.segment(65,13);
+    K.row(6) = lqr_vector.segment(78,13),
+    K.row(7) = lqr_vector.segment(91,13),
+    K.row(8) = lqr_vector.segment(104,13),
+    K.row(9) = lqr_vector.segment(117,13),
+    K.row(10) = lqr_vector.segment(130,13),
+    K.row(11) = lqr_vector.segment(143,13);
+
+    cout << K << "\n" <<endl;
+
+    /**** computing the centroidal forces at current timestep ----*/
+    // F = F* - K*delta_x
+
+    end_eff_lqr_tau = des_fff + K * delta_x;
+
+    sotDEBUGOUT(15);
+    return end_eff_lqr_tau;
+  }
 
 dynamicgraph::Vector& ComImpedanceControl::
   return_control_torques( dynamicgraph::Vector &tau, int t){
@@ -140,7 +339,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& position = biasedpositionSIN(t);
     const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
     const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
-    const dynamicgraph::Vector& des_lmom = desiredlmomSIN(t);
+    const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
     const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
     const dynamicgraph::Vector& mass = massSIN(t);
 
@@ -150,7 +349,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     assert(position.size() == 3);
     assert(des_pos.size() == 3);
     assert(velocity.size() == 3);
-    assert(des_lmom.size() == 3);
+    assert(des_vel.size() == 3);
     assert(des_fff.size() == 3);
 
     // cout << "isbiasset" << isbiasset << endl;
@@ -158,11 +357,11 @@ dynamicgraph::Vector& ComImpedanceControl::
       if(!safetyswitch){
         /*---------- computing position error ----*/
         pos_error.array() = des_pos.array() - position.array();
-        lmom_error.array() = des_lmom.array() - mass.array() * velocity.array();
+        vel_error.array() = des_vel.array() - velocity.array();
         /*---------- computing tourques ----*/
 
-        tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array())
-                      + lmom_error.array()*Kd.array();
+        tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
+                      + vel_error.array()*Kd.array());
 
 
         tau[1] = 0.0;
@@ -182,76 +381,6 @@ dynamicgraph::Vector& ComImpedanceControl::
   }
 
 dynamicgraph::Vector& ComImpedanceControl::
-  return_angcontrol_torques( dynamicgraph::Vector &angtau, int t){
-    sotDEBUGIN(15);
-
-    const dynamicgraph::Vector& Kp_ang = KpAngSIN(t);
-    const dynamicgraph::Vector& Kd_ang = KdAngSIN(t);
-    const dynamicgraph::Vector& inertia = inertiaSIN(t);
-    const dynamicgraph::Vector& des_ori = desoriSIN(t);
-    const dynamicgraph::Vector& ori = oriSIN(t);
-    const dynamicgraph::Vector& omega = angvelSIN(t);
-    const dynamicgraph::Vector& amom_des = desiredamomSIN(t);
-    const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
-
-    if (isbiasset){
-      /*----- assertions of sizes -------------*/
-
-      assert(Kp_ang.size() == 3);
-      assert(Kd_ang.size() == 3);
-      assert(des_ori.size() == 4);
-      assert(ori.size() == 4);
-      assert(omega.size() == 3);
-      assert(amom_des.size() == 3);
-      assert(hd_des.size()==3);
-      assert(inertia.size()==3);
-
-      des_ori_quat.w() = des_ori[3];
-      des_ori_quat.vec()[0] = des_ori[0];
-      des_ori_quat.vec()[1] = des_ori[1];
-      des_ori_quat.vec()[2] = des_ori[2];
-
-      ori_quat.w() = ori[3];
-      ori_quat.vec()[0] = ori[0];
-      ori_quat.vec()[1] = ori[1];
-      ori_quat.vec()[2] = ori[2];
-
-      des_ori_se3 = des_ori_quat.toRotationMatrix();
-      ori_se3 = ori_quat.toRotationMatrix();
-
-      ori_error_se3 = des_ori_se3.transpose() * ori_se3;
-      ori_error_quat = ori_error_se3;
-
-      //todo: multiply as matrix
-
-      ori_error.resize(3);
-      ori_error[0] = -2.0*(ori_error_quat.vec()[0] + ori_error_quat.w())*ori_error_quat.vec()[0] * Kp_ang[0];
-      ori_error[1] = -2.0*(ori_error_quat.vec()[1] + ori_error_quat.w())*ori_error_quat.vec()[1] * Kp_ang[1];
-      ori_error[2] = -2.0*(ori_error_quat.vec()[2] + ori_error_quat.w())*ori_error_quat.vec()[2] * Kp_ang[2];
-
-      /*---------- computing ang error ----*/
-      h_error.array() = inertia.array()*omega.array() - amom_des.array();
-
-      angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
-
-    }
-
-    else {
-      angtau.array() = omega.array() - omega.array();
-    }
-
-    /*------------ Safety checks -------*/
-    // if (h_error[])
-
-    // cout << ang_tau[1] << endl;
-
-
-    sotDEBUGOUT(15);
-    return angtau;
-  }
-
-
-dynamicgraph::Vector& ComImpedanceControl::
   compute_end_eff_forces(dynamicgraph::Vector & end_forces, int t){
 
     sotDEBUGIN(15);
@@ -268,33 +397,42 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Matrix& reg = regSIN(t);
     const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
 
+    const dynamicgraph::Vector& abs_end_eff_vel = absendeffvelSIN(t);
 
-    end_forces.resize(18);
+    end_forces.resize(30);
     assert(thrcntvalue.size()==4);
 
     if(isbiasset){
       if(thrcntvalue.sum() > 0.5){
-        ce0.resize(6);
-
+        ce0.resize(18);
+        ce0.setZero();
         // cout << "started " << endl;
         assert(lctrl.size()==3);
         assert(actrl.size()==3);
-        assert(g0.size()== 18);
-        assert(ce0.size()==6);
+        assert(g0.size()== 30);
+        assert(ce0.size()==18);
 
 
         hess_new = hess;
         ce_new = ce;
+
 
         /******* setting up the QP *************************/
 
         ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
         ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
 
+        // updating ce_new based on the desired absolute end effector velocity
+
+        for (int i=0; i < 12; i ++){
+            ce_new(i+6,i) = abs_end_eff_vel(i);
+        }
+
+
         /******** setting elements of matrix to zero when foot is not
         ********* on the ground ***********************************************/
 
-        qp.problem(18, 6, 6);
+        qp.problem(30, 18, 18);
 
         if(thrcntvalue[0] < 0.2){
           // setting the columns related to Fl to zero since it is not on the ground
@@ -403,9 +541,6 @@ dynamicgraph::Vector& ComImpedanceControl::
   }
 
 
-
-
-
 dynamicgraph::Vector& ComImpedanceControl::
   set_pos_bias(dynamicgraph::Vector& pos_bias, int t){
     // NOTE : when a value of the signal is not computed at all timesteps
@@ -505,7 +640,7 @@ dynamicgraph::Vector& ComImpedanceControl::
     thr_cnt_sensor.resize(4); thr_cnt_sensor.fill(0.);
 
     for(int i = 0; i < 4; i++){
-      if (cnt_sensor[i] < 0.2){
+      if (cnt_sensor[i] < 0.20){
         thr_cnt_sensor[i] = 0.0 ;
       }
       // else if (cnt_sensor[i] > 0.8){
