@@ -241,9 +241,9 @@ dynamicgraph::Vector& ComImpedanceControl::
           //todo: multiply as matrix
 
           ori_error.resize(3);
-          ori_error[0] = -2.0*(ori_error_quat.vec()[0] + ori_error_quat.w())*ori_error_quat.vec()[0] * Kp_ang[0];
-          ori_error[1] = -2.0*(ori_error_quat.vec()[1] + ori_error_quat.w())*ori_error_quat.vec()[1] * Kp_ang[1];
-          ori_error[2] = -2.0*(ori_error_quat.vec()[2] + ori_error_quat.w())*ori_error_quat.vec()[2] * Kp_ang[2];
+          ori_error[0] = -2.0*((ori_error_quat.w()*ori_error_quat.vec()[0] * Kp_ang[0]) + (Kp_ang[2] - Kp_ang[1])*(ori_error_quat.vec()[1]*ori_error_quat.vec()[2]));
+          ori_error[1] = -2.0*((ori_error_quat.w()*ori_error_quat.vec()[1] * Kp_ang[1]) + (Kp_ang[0] - Kp_ang[2])*(ori_error_quat.vec()[0]*ori_error_quat.vec()[2]));
+          ori_error[2] = -2.0*((ori_error_quat.w()*ori_error_quat.vec()[2] * Kp_ang[2]) + (Kp_ang[1] - Kp_ang[0])*(ori_error_quat.vec()[1]*ori_error_quat.vec()[0]));
 
           /*---------- computing ang error ----*/
           h_error.array() = inertia.array()*(omega.array() - des_omega.array());
