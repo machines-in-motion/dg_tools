@@ -24,3 +24,4 @@ License BSD-3-Clause
 
 - `src/`: C++ implementation of entities
 - `python/`: Helper functions for commomn tasks (slider filtering, impedance controller...)
+
