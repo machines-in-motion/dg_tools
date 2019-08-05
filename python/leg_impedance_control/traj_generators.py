@@ -1,7 +1,11 @@
-## This code contains different trajectory generation functions
-
-## Author: Avadesh Meduri
-## Date: 6/02./2019
+"""
+@package py_dg_tools
+@author Avadesh Meduri
+@license License BSD-3-Clause
+@copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+@date 2019-02-06
+@brief This code contains different trajectory generation functions
+"""
 
 import numpy as np
 from numpy import math

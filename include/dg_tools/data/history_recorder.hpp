@@ -1,6 +1,9 @@
 /**
- * Copyright 2019 Max Planck Society. All rights reserved.
- * Julian Viereck
+ * @file upsampler.hpp
+ * @author Julian Viereck
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @date 2019-08-05
  */
 
 #pragma once

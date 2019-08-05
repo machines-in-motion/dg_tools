@@ -1,7 +1,12 @@
-// impedance controller implementation for COM (used for quadruped)
-// Author : Avadesh Meduri
-// Date : 25/03/19
-
+/**
+ * @file ComImpedanceController.hpp
+ * @author Avadesh Meduri
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @date 2019-03-19
+ * 
+ * @brief impedance controller implementation for COM (used for quadruped)
+ */
 
 #ifndef __SOT_com_impedance_Control_HH__
 #define  __SOT_com_impedance_Control_HH__

@@ -1,6 +1,11 @@
-## Contains implementation of leg impedance impedance_controller
-## Author: Avadesh Meduri
-## Date : 1st March 2019
+"""
+@package py_dg_tools
+@author Avadesh Meduri
+@license License BSD-3-Clause
+@copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+@date 2019-03-01
+@brief Implementation of leg impedance impedance_controller
+"""
 
 #################### Imports #################################################
 

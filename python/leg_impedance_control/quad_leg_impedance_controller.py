@@ -1,6 +1,11 @@
-## impedance controller implementation on test stand
-## Author : Avadesh Meduri
-## Date : 1/03/19
+"""
+@package py_dg_tools
+@author Avadesh Meduri
+@license License BSD-3-Clause
+@copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+@date 2019-03-01
+@brief Impedance controller implementation on test stand
+"""
 
 ########################### Imports ###########################################
 

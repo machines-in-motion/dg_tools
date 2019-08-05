@@ -1,8 +1,11 @@
 """
-This script converts data dumps from dynamic graph to a RAI compatible npz format.
-
-Author: Julian Viereck
-Date: 13 Dec 2018
+@package py_dg_tools
+@author Julian Viereck
+@license License BSD-3-Clause
+@copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+@date 2018-12-13
+@brief This script converts data dumps from dynamic graph to a RAI compatible
+npz format.
 """
 
 from os import listdir

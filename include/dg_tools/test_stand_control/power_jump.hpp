@@ -1,6 +1,12 @@
-/* This is a controller to achieve power jumps on the teststand */
-//Author : Avadesh Meduri
-// Date : 14/04/2019
+/**
+ * @file power_jump.hpp
+ * @author Avadesh Meduri
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @date 2019-04-14
+ * 
+ * @brief This is a controller to achieve power jumps on the teststand
+ */
 
 #ifndef __SOT__power_jump_control_HH__
 #define __SOT__power_jump_control_HH__

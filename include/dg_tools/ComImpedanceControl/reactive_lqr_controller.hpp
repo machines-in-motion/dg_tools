@@ -1,9 +1,13 @@
-// receding reactive LQR implementation for solo. The desired trajectory is obtained
-// from the centroidal momentum controller.
-
-//Author : Avadesh Meduri
-// Date: 29/04/2019
-
+/**
+ * @file reactive_lqr_controller.hpp
+ * @author Avadesh Meduri
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @date 2019-04-29
+ * 
+ * @brief receding reactive LQR implementation for solo. The desired trajectory
+ * is obtained from the centroidal momentum controller.
+ */
 
 #ifndef __SOT_reactive_lqr_controller_HH__
 #define __SOT_reactive_lqr_controller_HH__

@@ -1,7 +1,12 @@
-## Contains generic impedance control functions that will be used by the impedance_controller
-## Author: Avadesh Meduri
-## Date : 1st March 2019
-
+"""
+@package py_dg_tools
+@author Avadesh Meduri
+@license License BSD-3-Clause
+@copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+@date 2019-03-01
+@brief Contains generic impedance control functions that will be used by the
+impedance_controller
+"""
 
 #################### Imports #################################################
 
