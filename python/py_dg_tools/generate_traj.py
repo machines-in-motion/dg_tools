@@ -45,21 +45,16 @@ if __name__ == "__main__":
     ### Parameters
     time_phase = 1.2
     T = 0.001
-    
-    ### Time
-    
     time_0 = 0.0
-    time_1 = tf/3.0
-    time_2 = 2*tf/3.0
-    time_3 = tf
-    time = np.linspace(0.0, time_3, num=nb_pt, endpoint=True)
-    
-    phase0 = np.linspace(time_0, time_1, num=int((time_1-time_0)/T), endpoint=True)
-    phase1 = np.linspace(time_1, time_2, num=int((time_2-time_1)/T), endpoint=True)
-    phase2 = np.linspace(time_2, time_3, num=int((time_3-time_2)/T), endpoint=True)
-    nb_pt_phase0 = phase0.shape[0]
-    nb_pt_phase1 = phase1.shape[0]
-    nb_pt_phase2 = phase2.shape[0]
+    time_1 = time_phase    
+    phase = np.linspace(time_0, time_1, num=int((time_1-time_0)/T), endpoint=True)
+    nb_pt_phase = phase.shape[0]
+
+    hl_zref = -0.12
+    hr_zref = -0.05
+    dx = +0.00
+
+    z_final = 0.0
 
     ### Phase 0 ################################################################
     
@@ -70,19 +65,58 @@ if __name__ == "__main__":
     com0_y = 0.00044412
     com0_z = 0.19240999
     com, dcom = traj_generator([time_0, time_1],
-      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase0)
+      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase)
 
     ## HL
     # oMhl ('hl: ', matrix([[ 0.01      ,  0.14205   , -0.00294615]]))
     # bMhl ('hl: ', matrix([[-0.19      ,  0.14205   , -0.22294615]]))
-    hl, dhl = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.1]], phase0)
+    hl, dhl = traj_generator([time_0, time_0 + T, time_0 + 2*T, time_1 - 2*T, time_1 - T, time_1],
+      [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [-0.22294615, -0.22294615, -0.22294615, hl_zref, hl_zref, hl_zref]], phase)
 
     ## HR
     # ('hr: ', matrix([[ 0.01      , -0.14205   , -0.00294615]]))
     # bMhr ('hr: ', matrix([[-0.19      , -0.14205   , -0.22294615]]))
-    hr, dhr = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.1]], phase0)
+    hr, dhr = traj_generator([time_0, time_0 + T, time_0 + 2*T, time_1 - 2*T, time_1 - T, time_1],
+      [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [-0.22294615, -0.22294615, -0.22294615, hr_zref, hr_zref, hr_zref]], phase)
+
+    ### FL
+    # ('fl: ', matrix([[ 0.39      ,  0.14205   , -0.00294615]]))
+    # bMfl ('fl: ', matrix([[ 0.19      ,  0.14205   , -0.22294615]]))
+    fl, dfl = traj_generator([time_0, time_1],
+      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.22294615]], phase)
+
+    ### FR
+    # ('fr: ', matrix([[ 0.39      , -0.14205   , -0.00294615]]))
+    # bMfr ('fr: ', matrix([[ 0.19      , -0.14205   , -0.22294615]]))
+    fr, dfr = traj_generator([time_0, time_1],
+      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.22294615]], phase)
+
+    ### Phase 0.5 ################################################################
+    
+    ## CoM
+    # oMcom ('com: ', matrix([[0.2       , 0.00044412, 0.19240999]]))
+    # bMcom 
+    com0_x = 0.2
+    com0_y = 0.00044412
+    com0_z = 0.19240999
+    com_phase, dcom_phase = traj_generator([time_0, time_1],
+      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase)
+
+    ## HL
+    # oMhl ('hl: ', matrix([[ 0.01      ,  0.14205   , -0.00294615]]))
+    # bMhl ('hl: ', matrix([[-0.19      ,  0.14205   , -0.22294615]]))
+    hl_phase, dhl_phase = traj_generator([time_0, time_1],
+      [[0.0, 0.0], [0.0, 0.0], [hl_zref, hl_zref]], phase)
+
+    ## HR
+    # ('hr: ', matrix([[ 0.01      , -0.14205   , -0.00294615]]))
+    # bMhr ('hr: ', matrix([[-0.19      , -0.14205   , -0.22294615]]))
+    hr_phase, dhr_phase = traj_generator([time_0, time_1],
+      [[0.0, 0.0], [0.0, 0.0], [hr_zref, hr_zref]], phase)
 
     ### FL
     # ('fl: ', matrix([[ 0.39      ,  0.14205   , -0.00294615]]))
@@ -90,19 +124,28 @@ if __name__ == "__main__":
     x_init = 0.0
     z_init = -0.22294615
     x_final = 0.1
-    z_final = 0.2
     t_s = [time_0, time_0+T, time_0+2*T, (time_1-time_0)/3.0, 2.0*(time_1-time_0)/3.0, time_1-2*T, time_1-T, time_1]
-    x = [x_init, x_init, x_init, x_init, x_init, x_final, x_final, x_final]
+    x = [x_init, x_init, x_init, x_init + dx, x_init + dx, x_final, x_final, x_final]
     y = [0.0] * len(t_s)
-    z = [z_init, z_init, z_init, z_final/3.0, z_final + 0.1, z_final, z_final, z_final]
-    fl, dfl = traj_generator(t_s, [x, y, z], phase0)
+    z = [z_init, z_init, z_init, z_final, z_final + 0.1, z_final, z_final, z_final]
+    fl_phase, dfl_phase = traj_generator(t_s, [x, y, z], phase)
     
     ### FR
     # ('fr: ', matrix([[ 0.39      , -0.14205   , -0.00294615]]))
     # bMfr ('fr: ', matrix([[ 0.19      , -0.14205   , -0.22294615]]))
-    fr, dfr = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.22294615]], phase0)
+    fr_phase, dfr_phase = traj_generator([time_0, time_1],
+      [[0.0, 0.0], [0.0, 0.0], [-0.22294615, -0.22294615]], phase)
 
+    # stack the trajectories
+    com = np.concatenate((com, com_phase), axis=1)
+    hl = np.concatenate((hl, hl_phase), axis=1)
+    dhl = np.concatenate((dhl, dhl_phase), axis=1)
+    hr = np.concatenate((hr, hr_phase), axis=1)
+    dhr = np.concatenate((dhr, dhr_phase), axis=1)
+    fl = np.concatenate((fl, fl_phase), axis=1)
+    dfl = np.concatenate((dfl, dfl_phase), axis=1)
+    fr = np.concatenate((fr, fr_phase), axis=1)
+    dfr = np.concatenate((dfr, dfr_phase), axis=1)
 
     ### Phase 1 ################################################################
     
@@ -113,25 +156,25 @@ if __name__ == "__main__":
     com0_y = 0.00044412
     com0_z = 0.19240999
     com_phase, dcom_phase = traj_generator([time_0, time_1],
-      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase0)
+      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase)
 
     ## HL
     # oMhl ('hl: ', matrix([[ 0.01      ,  0.14205   , -0.00294615]]))
     # bMhl ('hl: ', matrix([[-0.19      ,  0.14205   , -0.22294615]]))
     hl_phase, dhl_phase = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.1, -0.1]], phase0)
+      [[0.0, 0.0], [0.0, 0.0], [hl_zref, hl_zref]], phase)
 
     ## HR
     # ('hr: ', matrix([[ 0.01      , -0.14205   , -0.00294615]]))
     # bMhr ('hr: ', matrix([[-0.19      , -0.14205   , -0.22294615]]))
     hr_phase, dhr_phase = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.1, -0.1]], phase0)
+      [[0.0, 0.0], [0.0, 0.0], [hr_zref, hr_zref]], phase)
 
     ### FL
     # ('fl: ', matrix([[ 0.39      ,  0.14205   , -0.00294615]]))
     # bMfl ('fl: ', matrix([[ 0.19      ,  0.14205   , -0.22294615]]))
     fl_phase, dfl_phase = traj_generator([time_0, time_1],
-      [[0.1, 0.1], [0.0, 0.0], [0.2, 0.2]], phase0)
+      [[0.1, 0.1], [0.0, 0.0], [z_final, z_final]], phase)
     
     ### FR
     # ('fr: ', matrix([[ 0.39      , -0.14205   , -0.00294615]]))
@@ -139,12 +182,11 @@ if __name__ == "__main__":
     x_init = 0.0
     z_init = -0.22294615
     x_final = 0.1
-    z_final = 0.2
     t_s = [time_0, time_0+T, time_0+2*T, (time_1-time_0)/3.0, 2.0*(time_1-time_0)/3.0, time_1-2*T, time_1-T, time_1]
-    x = [x_init, x_init, x_init, x_init, x_init, x_final, x_final, x_final]
+    x = [x_init, x_init, x_init, x_init + dx, x_init + dx, x_final, x_final, x_final]
     y = [0.0] * len(t_s)
     z = [z_init, z_init, z_init, z_final/3.0, z_final + 0.1, z_final, z_final, z_final]
-    fr_phase, dfr_phase = traj_generator(t_s, [x, y, z], phase0)
+    fr_phase, dfr_phase = traj_generator(t_s, [x, y, z], phase)
 
     # stack the trajectories
     com = np.concatenate((com, com_phase), axis=1)
@@ -166,31 +208,35 @@ if __name__ == "__main__":
     com0_y = 0.00044412
     com0_z = 0.19240999
     com_phase, dcom_phase = traj_generator([time_0, time_1],
-      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase0)
+      [[0.2, 0.2], [0.00044412, 0.00044412], [0.19240999, 0.19240999]], phase)
 
     ## HL
     # oMhl ('hl: ', matrix([[ 0.01      ,  0.14205   , -0.00294615]]))
     # bMhl ('hl: ', matrix([[-0.19      ,  0.14205   , -0.22294615]]))
-    hl_phase, dhl_phase = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.1, -0.22294615]], phase0)
+    hl_phase, dhl_phase = traj_generator([time_0, time_0 + T, time_0 + 2*T, time_1 - 2*T, time_1 - T, time_1],
+      [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [hl_zref, hl_zref, hl_zref, -0.22294615, -0.22294615, -0.22294615]], phase)
 
     ## HR
     # ('hr: ', matrix([[ 0.01      , -0.14205   , -0.00294615]]))
     # bMhr ('hr: ', matrix([[-0.19      , -0.14205   , -0.22294615]]))
-    hr_phase, dhr_phase = traj_generator([time_0, time_1],
-      [[0.0, 0.0], [0.0, 0.0], [-0.1, -0.22294615]], phase0)
+    hr_phase, dhr_phase = traj_generator([time_0, time_0 + T, time_0 + 2*T, time_1 - 2*T, time_1 - T, time_1],
+      [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+       [hr_zref, hr_zref, hr_zref, -0.22294615, -0.22294615, -0.22294615]], phase)
 
     ### FL
     # ('fl: ', matrix([[ 0.39      ,  0.14205   , -0.00294615]]))
     # bMfl ('fl: ', matrix([[ 0.19      ,  0.14205   , -0.22294615]]))
     fl_phase, dfl_phase = traj_generator([time_0, time_1],
-      [[0.1, 0.1], [0.0, 0.0], [0.2, 0.2]], phase0)
+      [[0.1, 0.1], [0.0, 0.0], [z_final, z_final]], phase)
     
     ### FR
     # ('fr: ', matrix([[ 0.39      , -0.14205   , -0.00294615]]))
     # bMfr ('fr: ', matrix([[ 0.19      , -0.14205   , -0.22294615]]))
     fr_phase, dfr_phase = traj_generator([time_0, time_1],
-      [[0.1, 0.1], [0.0, 0.0], [0.2, 0.2]], phase0)
+      [[0.1, 0.1], [0.0, 0.0], [z_final, z_final]], phase)
 
     com = np.concatenate((com, com_phase), axis=1)
     hl = np.concatenate((hl, hl_phase), axis=1)
@@ -203,6 +249,9 @@ if __name__ == "__main__":
     dfr = np.concatenate((dfr, dfr_phase), axis=1)
 
     ### creation of the data files #############################################
+    nb_pt = com.shape[1]
+    time = np.linspace(0.0, nb_pt*T, num=nb_pt, endpoint=True)
+
     print ("com.shape", com.shape)
     print ("time.shape", time.shape)
     quadruped_com = np.vstack((time, com))
@@ -245,17 +294,24 @@ if __name__ == "__main__":
              time, fl[2,:], '--',
              time, fr[0,:], ':',
              time, fr[1,:], '-',
-             time, fr[2,:], '--')
+             time, fr[2,:], '--',
+             time, hl[0,:], ':',
+             time, hl[1,:], '-',
+             time, hl[2,:], '--',
+             time, hr[0,:], ':',
+             time, hr[1,:], '-',
+             time, hr[2,:], '--',
+    )
     plt.legend(['fl_x', 'fl_y', 'fl_z', 'fr_x', 'fr_y', 'fr_z'], loc='best')
-    #
-    plt.figure("vel")
-    plt.plot(time, dfl[0,:], ':',
-             time, dfl[1,:], '-',
-             time, dfl[2,:], '--',
-             time, dfr[0,:], ':',
-             time, dfr[1,:], '-',
-             time, dfr[2,:], '--')
-    plt.legend(['fl_dx', 'fl_dy', 'fl_dz', 'fr_dx', 'fr_dy', 'fr_dz'], loc='best')
+    # #
+    # plt.figure("vel")
+    # plt.plot(time, dfl[0,:], ':',
+    #          time, dfl[1,:], '-',
+    #          time, dfl[2,:], '--',
+    #          time, dfr[0,:], ':',
+    #          time, dfr[1,:], '-',
+    #          time, dfr[2,:], '--')
+    # plt.legend(['fl_dx', 'fl_dy', 'fl_dz', 'fr_dx', 'fr_dy', 'fr_dz'], loc='best')
 
     plt.show()
 
