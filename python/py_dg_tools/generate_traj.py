@@ -50,7 +50,7 @@ if __name__ == "__main__":
     phase = np.linspace(time_0, time_1, num=int((time_1-time_0)/T), endpoint=True)
     nb_pt_phase = phase.shape[0]
 
-    hl_zref = -0.12
+    hl_zref = -0.15
     hr_zref = -0.05
     dx = +0.00
 
