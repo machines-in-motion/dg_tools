@@ -132,24 +132,14 @@ def circular_trajectory_generator(radius_x, radius_z, omega, phase, bias, entity
     return pos_des, vel_des
 
 
-def cubic_interpolator(cubic_interpolator, init_vector_signal, goal_vector_signal, entityName):
+def cubic_interpolator(init_vector_signal, goal_vector_signal, entityName):
     """
     generate a cubic interpolation trajectory between the init_vector_signal
     and the goal_vector_signal. It returns the entity.
     """
-    cubic_interpolator = dynamic_graph.sot.tools.CubicInterpolation(entityName + "_posx")
+    cubic_interpolator = dynamic_graph.sot.tools.CubicInterpolation(entityName)
     cubic_interpolator.setSamplingPeriod(0.001)
-    plug(cubic_interpolator.init, init_vector_signal)
-    plug(cubic_interpolator.goal, goal_vector_signal)
+    plug(init_vector_signal, cubic_interpolator.init)
+    plug(goal_vector_signal, cubic_interpolator.goal)
     cubic_interpolator.reset()
-    cubic_interpolator.start()
-    return cubic_interpolator
-
-
-def reset_cubic_interpolator(cubic_interpolator):
-    """
-    Reset and restart the trajectory with the current plugged init/goal
-    """
-    cubic_interpolator.reset()
-    cubic_interpolator.start()
     return cubic_interpolator
