@@ -34,14 +34,6 @@ add_required_dependency("eigen-quadprog")
 add_required_dependency("dynamic-graph >= 3.0.0")
 add_required_dependency("dynamic-graph-python >= 3.0.0")
 
-####################################
-# Define the OS to be used locally #
-####################################
-
-# This macro sets the C++ preprocessor flags "XENOMAI", "RT_PREEMPT", or
-# "UBUNTU" according to the current operating system.
-define_os()
-
 ######################################################
 # define the include directory of all ${CATKIN_PKGS} #
 ######################################################
