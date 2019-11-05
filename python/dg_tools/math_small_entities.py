@@ -4,28 +4,51 @@
 @license License BSD-3-Clause
 @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
 @date 2019-03-01
-@brief Contains functions that help the use of sot-core
+@brief Contains generic impedance control functions that will be used by the
+impedance_controller
 """
 
-
-#################### Imports #################################################
-
-
-import os, os.path
-
-import numpy as np
-import rospkg
-
+#
+# Imports
+#
 from dynamic_graph import plug
 from dynamic_graph.sot.core import Selec_of_vector
-from dynamic_graph.sot.core.operator import *
-from dynamic_graph.sot.core.vector_constant import VectorConstant
-from dynamic_graph.sot.core.matrix_constant import MatrixConstant
-from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
-from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
+from dynamic_graph.sot.core.math_small_entities import (
+    VectorConstant,
+    MatrixConstant,
+    Add_of_double,
+    Add_of_vector,
+    Multiply_double_vector,
+    Substract_of_vector,
+    Multiply_matrix_vector,
+    MatrixTranspose,
+    MatrixHomoToPose,
+    # Component_of_vector,
+    # Selec_of_vector,
+    Stack_of_vector,
+)
+# from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
+# from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 
 
-################### Initialisers #############################################
+#
+# Initialisers
+#
+class ConstVector(object):
+    """
+    Define a nice interface to create constant vector
+    """
+
+    def __init__(self, vec, entity_name):
+        self.vec = VectorConstant(entity_name)
+        self.set_vec(vec)
+        self.sout = self.vec.sout
+
+    def set_vec(self, vec):
+        self.vec.sout.value = vec
+
+    def get_vec(self):
+        return self.vec.sout.value
 
 
 def constVector(val, entityName=''):
@@ -38,20 +61,62 @@ def constVector(val, entityName=''):
     return op
 
 
-def constMatrix(val, entityName):
+def matrixConstant(val):
     """
     ## This function initialises an constant matrix
     ## Input : matrix (python array)
     """
-    op = MatrixConstant(entityName).sout
+    op = MatrixConstant("").sout
     op.value = val
     return op
 
 
-#################### Operators ################################################
+class DoubleConstant(object):
+    """
+    Fake an entity which provide a constant double
+
+    The idea is to create a "sout = sin1 + 0.0", hence a constant double
+    """
+
+    def __init__(self, value, entity_name=""):
+        # create a "double + double"
+        self.add = Add_of_double(entity_name)
+        # initialize both value to 0.0
+        self.add.sin1.value = value
+        self.add.sin2.value = 0.0
+        # the input signal is in fact the sin1, so "sout = sin1 + 0.0"
+        self.sin = self.add.sin1
+        self.sout = self.add.sout
+
+    def set_value(self, value):
+        self.add.sin1.value = value
+
+    def get_value(self):
+        return self.add.sin1.value
 
 
-def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
+"""
+Operators
+"""
+
+
+class Stack2Vectors(object):
+    """
+    Define an easier interface to simple stack 2 vectors
+    """
+
+    def __init__(self, sin1, sin2, size1, size2, entity_name=""):
+        self.op = Stack_of_vector(entity_name)
+        self.op.selec1(0, size1)
+        self.op.selec2(0, size2)
+        self.sin1 = self.op.sin1
+        self.sin2 = self.op.sin2
+        self.sout = self.op.sout
+        plug(sin1, self.op.sin1)
+        plug(sin2, self.op.sin2)
+
+
+def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=''):
     """
     ## This function stacks two vectors
     ## Input : Constant vector (not numpy arrays)
@@ -59,7 +124,7 @@ def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
           : size of first vector (int)
           : size of first vector (int)
     """
-    op = Stack_of_vector("")
+    op = Stack_of_vector(entityName)
     op.selec1(0, vec1_size)
     op.selec2(0, vec2_size)
     plug(vec1, op.signal('sin1'))
@@ -92,7 +157,7 @@ def selec_vector(vec, start_index, end_index, entityName=''):
     ## Input : Constant vector (not numpy array)
          : start index (int)
          : end index (int)
-    ## Ex    : selec_vector([1,2,3,4], 1,3) = [2,3] {input must be a const vector}
+    ## Ex : selec_vector([1,2,3,4], 1,3) = [2,3] {input must be a const vector}
     """
     op = Selec_of_vector(entityName)
     op.selec(start_index, end_index)
@@ -100,31 +165,23 @@ def selec_vector(vec, start_index, end_index, entityName=''):
     return op.sout
 
 
-def component_of_vector(vector, index, entityName):
-    """
-    ## This function selects a compnent of the input vector
-    ## Input : Constant vector (not numpy array)
-         : index (int)
-    """
-    comp_of_vect = Component_of_vector(entityName)
-    comp_of_vect.setIndex(index)
-    plug(vector, comp_of_vect.sin)
-    return comp_of_vect.sout
+#
+#  Math Operators
+#
 
 
-###################  Math Operators ##########################################
-
-
-def add_doub_doub(db1, db2, entityName):
+class Add2Vectors(object):
     """
-    ## This function adds two doubles
-    ## Input : db1 - double (number)
-             : db2 - double (value)
+    interface to the Add_of_vector entity
     """
-    add = Add_of_double(entityName)
-    add.sin1.value = db1
-    add.sin2.value = db2
-    return add
+
+    def __init__(self, vector_sin1, vector_sin2, entity_name=''):
+        self.op = Add_of_vector(entity_name)
+        self.sin1 = self.op.sin1
+        self.sin2 = self.op.sin2
+        self.sout = self.op.sout
+        plug(vector_sin1, self.op.sin1)
+        plug(vector_sin2, self.op.sin2)
 
 
 def add_vec_vec(vec1, vec2, entityName=''):
@@ -159,7 +216,7 @@ def transpose_mat(mat, entityName=''):
     return op.sout
 
 
-def multiply_mat_vec(mat,vec, entityName=''):
+def multiply_mat_vec(mat, vec, entityName=''):
     """
     ## This function multiplies a matrix and vector
     ## Input : Constant matrix (not numpy arrays)
@@ -169,6 +226,20 @@ def multiply_mat_vec(mat,vec, entityName=''):
     plug(mat, mat_mul.signal('sin1'))
     plug(vec, mat_mul.signal('sin2'))
     return mat_mul.sout
+
+
+class MultiplyDoubleVector(object):
+    """
+    Simpler interface to multiply a double and a vector
+    """
+
+    def __init__(self, double_sin, vector_sin, entity_name=''):
+        self.op = Multiply_double_vector(entity_name)
+        self.sin1 = self.op.sin1
+        self.sin2 = self.op.sin2
+        self.sout = self.op.sout
+        plug(double_sin, self.op.sin1)
+        plug(vector_sin, self.op.sin2)
 
 
 def mul_double_vec(doub, vec, entityName=''):
@@ -182,18 +253,6 @@ def mul_double_vec(doub, vec, entityName=''):
     plug(vec, mul.signal('sin2'))
     return mul.sout
 
-
-def mul_vec_vec(vec1, vec2, entityName):
-    """
-    ## This function multiplies two Vectors element wise
-    ## Input : Constant vectors (not numpy arrays)
-    """
-    vec_mul = Multiply_of_vector(entityName)
-    plug(vec1, vec_mul.sin0)
-    plug(vec2, vec_mul.sin1)
-    return vec_mul.sout
-
-
 ######################### Robotics operators ##################################
 
 
@@ -205,26 +264,3 @@ def hom2pos(robot_joint_signal, entityName=''):
     conv_pos = MatrixHomoToPose(entityName)
     plug(robot_joint_signal, conv_pos.signal('sin'))
     return conv_pos.signal('sout')
-
-
-def convert_quat_se3(quat, entityName):
-    """
-    ## This function transforms a quaternion(4d) to se3
-    ## Input : quaternion signal
-    """
-
-    quat_to_se3 = QuaternionToMatrix(entityName)
-    plug(quat, quat_to_se3.signal('sin'))
-    return quat_to_se3.signal('sout')
-
-
-######################### Standard vectors ####################################
-
-
-def zero_vec(vec_size, entityName):
-    """
-    ## This function creates a zero constvector of vec_size
-    ## Input : size of zero vector (int)
-    """
-    zero_vec = np.zeros(vec_size)
-    return constVector(zero_vec, entityName)
