@@ -1,37 +1,34 @@
 """
-@package py_dg_tools
+@package dg_blmc_robot
+@file quad_leg_impedance_controller.py
 @author Avadesh Meduri
 @license License BSD-3-Clause
 @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
 @date 2019-03-01
-@brief Impedance controller implementation on test stand
+@brief Impedance controller implementation on a quadruped
 """
 
 ########################### Imports ###########################################
 
-from leg_impedance_control.utils import *
-from leg_impedance_control.leg_impedance_controller import leg_impedance_controller
-from leg_impedance_control.traj_generators import mul_double_vec_2
+from dg_tools.utils import *
+from dg_tools.traj_generators import mul_double_vec_2
+from dg_tools.leg_impedance_control.leg_impedance_controller import LegImpedanceController
+
 # from dynamic_graph_manager.vicon_sdk import ViconClientEntity
 from dynamic_graph_manager.dg_tools import ComImpedanceControl
 from dynamic_graph.sot.core.switch import SwitchVector
 
-import dynamic_graph.sot.dynamics_pinocchio as dp
-
-from py_robot_properties_quadruped.config import QuadrupedConfig
-
-
 ###############################################################################
 
 
-class quad_leg_impedance_controller():
+class QuadrupedLegImpedanceController():
     def __init__(self, robot):
         self.robot = robot
 
-        self.imp_ctrl_leg_fl = leg_impedance_controller("fl")
-        self.imp_ctrl_leg_fr = leg_impedance_controller("fr")
-        self.imp_ctrl_leg_hl = leg_impedance_controller("hl")
-        self.imp_ctrl_leg_hr = leg_impedance_controller("hr")
+        self.imp_ctrl_leg_fl = LegImpedanceController("fl")
+        self.imp_ctrl_leg_fr = LegImpedanceController("fr")
+        self.imp_ctrl_leg_hl = LegImpedanceController("hl")
+        self.imp_ctrl_leg_hr = LegImpedanceController("hr")
 
     def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf = None, fff=None):
         """
@@ -139,7 +136,6 @@ class quad_leg_impedance_controller():
 
         return control_torques
 
-
     def return_joint_ctrl_torques(self, kp_joint, des_joint_pos, kd_joint, des_joint_vel):
         pos_error = subtract_vec_vec(des_joint_pos, self.robot.device.joint_positions, "joint_pos_error")
         vel_error = subtract_vec_vec(des_joint_vel, self.robot.device.joint_velocities, "joint_vel_error")
@@ -154,7 +150,6 @@ class quad_leg_impedance_controller():
         jtorque = add_vec_vec(pos_error_with_gains, vel_error_with_gains, "joint_torque")
         return jtorque
 
-
     def record_data(self, record_vicon = False):
         self.imp_ctrl_leg_fl.record_data(self.robot)
         self.imp_ctrl_leg_fr.record_data(self.robot)
@@ -162,7 +157,7 @@ class quad_leg_impedance_controller():
         self.imp_ctrl_leg_hr.record_data(self.robot)
 
 
-class quad_com_control():
+class QuadrupedComControl():
     def __init__(self, robot, ViconClientEntity, client_name = "vicon_client" , vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl"):
 
         self.robot = robot
@@ -484,8 +479,6 @@ class quad_com_control():
 
         return wbc_torques
 
-
-
     def record_data(self):
         # self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
@@ -495,16 +488,16 @@ class quad_com_control():
         # #
         #
         self.robot.add_trace(self.EntityName, "wbctrl")
-        self.robot.add_ros_and_trace(self.EntityName, "wbctrl")
+        # self.robot.add_ros_and_trace(self.EntityName, "wbctrl")
 
         self.robot.add_trace(self.EntityName, "lqrtau")
-        self.robot.add_ros_and_trace(self.EntityName, "lqrtau")
+        # self.robot.add_ros_and_trace(self.EntityName, "lqrtau")
 
         # self.robot.add_trace(self.EntityName, "thr_cnt_sensor")
         # self.robot.add_ros_and_trace(self.EntityName, "thr_cnt_sensor")
         #
         self.robot.add_trace("com_torques", "sout")
-        self.robot.add_ros_and_trace("com_torques", "sout")
+        # self.robot.add_ros_and_trace("com_torques", "sout")
 
         # self.robot.add_trace(self.EntityName, "end_eff_lqr_tau")
         # self.robot.add_ros_and_trace(self.EntityName, "end_eff_lqr_tau")
@@ -513,7 +506,7 @@ class quad_com_control():
         # self.robot.add_ros_and_trace("lqr_end_eff_force", "sout")
 
         self.robot.add_trace("biased_pos", "sout")
-        self.robot.add_ros_and_trace("biased_pos", "sout")
+        # self.robot.add_ros_and_trace("biased_pos", "sout")
 
         #
         # self.robot.add_trace("biased_vel", "sout")

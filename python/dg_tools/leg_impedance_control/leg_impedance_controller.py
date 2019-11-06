@@ -1,25 +1,25 @@
 """
-@package py_dg_tools
+@package dg_blmc_robots
+@file leg_impedance_controller.py
 @author Avadesh Meduri
 @license License BSD-3-Clause
 @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
-@date 2019-03-01
-@brief Implementation of leg impedance impedance_controller
+@date 2019-02-06
+@brief This code contains implementation of leg impedance impedance_controller
 """
 
 #################### Imports #################################################
 
-from leg_impedance_control.utils import *
-from leg_impedance_control.traj_generators import mul_double_vec_2
+from dg_tools.utils import *
+from dg_tools.traj_generators import mul_double_vec_2
 
 from py_robot_properties_teststand.config import TeststandConfig
-
 import dynamic_graph.sot.dynamics_pinocchio as dp
 
 
 #############################################################################
 
-class leg_impedance_controller():
+class LegImpedanceController():
     def __init__(self, leg_name):
         self.leg_name = leg_name
         self.robot_pin = TeststandConfig.buildRobotWrapper()
@@ -124,19 +124,19 @@ class leg_impedance_controller():
     def record_data(self, robot):
 
         robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("rel_pos_foot_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("rel_pos_foot_" + self.leg_name, "sout")
 
         robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("rel_vel_foot_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("rel_vel_foot_" + self.leg_name, "sout")
 
         robot.add_trace("pos_error_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("pos_error_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("pos_error_" + self.leg_name, "sout")
 
         robot.add_trace("vel_error_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("vel_error_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("vel_error_" + self.leg_name, "sout")
 
         robot.add_trace("est_f_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("est_f_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("est_f_" + self.leg_name, "sout")
 
         robot.add_trace("total_error_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("total_error_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace("total_error_" + self.leg_name, "sout")

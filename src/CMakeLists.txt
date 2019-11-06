@@ -6,8 +6,8 @@ set(lib_name dg_tools)
 # then we build the different entities and install them in devel/lib/plugin folder
 # NOTE: in sot-core, these are set as plugins.
 set(cpp_source_files
-  ComImpedanceControl/ComImpedanceController.cpp
-  ComImpedanceControl/reactive_lqr_controller.cpp
+  com_impedance_control/com_impedance_controller.cpp
+  com_impedance_control/reactive_lqr_controller.cpp
   test_stand_control/power_jump.cpp
   control/control_pd.cpp
   control/calibrator.cpp

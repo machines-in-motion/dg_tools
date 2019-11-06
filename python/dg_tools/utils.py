@@ -4,17 +4,17 @@
 @license License BSD-3-Clause
 @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
 @date 2019-03-01
-@brief Contains generic impedance control functions that will be used by the
-impedance_controller
+@brief Contains functions that help the use of sot-core
 """
 
+
 #################### Imports #################################################
+
 
 import os, os.path
 
 import numpy as np
 import rospkg
-
 
 from dynamic_graph import plug
 from dynamic_graph.sot.core import Selec_of_vector
@@ -24,9 +24,9 @@ from dynamic_graph.sot.core.matrix_constant import MatrixConstant
 from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
 from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 
-##############################################################################
 
 ################### Initialisers #############################################
+
 
 def constVector(val, entityName=''):
     """
@@ -36,6 +36,7 @@ def constVector(val, entityName=''):
     op = VectorConstant(entityName).sout
     op.value = list(val)
     return op
+
 
 def constMatrix(val, entityName):
     """
@@ -47,8 +48,8 @@ def constMatrix(val, entityName):
     return op
 
 
+#################### Operators ################################################
 
-    #################### Operators ################################################
 
 def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
     """
@@ -64,6 +65,7 @@ def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
     plug(vec1, op.signal('sin1'))
     plug(vec2, op.signal('sin2'))
     return op.signal('sout')
+
 
 def stack_zero(vec, entityName=''):
     """
@@ -83,6 +85,7 @@ def stack_zero(vec, entityName=''):
     plug(vec, op.sin2)
     return op.sout
 
+
 def selec_vector(vec, start_index, end_index, entityName=''):
     """
     ## This function selects a part of the input vector (slices vector)
@@ -96,6 +99,7 @@ def selec_vector(vec, start_index, end_index, entityName=''):
     plug(vec, op.signal('sin'))
     return op.sout
 
+
 def component_of_vector(vector, index, entityName):
     """
     ## This function selects a compnent of the input vector
@@ -108,7 +112,8 @@ def component_of_vector(vector, index, entityName):
     return comp_of_vect.sout
 
 
-    ###################  Math Operators ##########################################
+###################  Math Operators ##########################################
+
 
 def add_doub_doub(db1, db2, entityName):
     """
@@ -132,6 +137,7 @@ def add_vec_vec(vec1, vec2, entityName=''):
     plug(vec2, add.signal('sin2'))
     return add.sout
 
+
 def subtract_vec_vec(pos1, pos2, entityName=''):
     """
     ## This function subtracts two Vectors
@@ -142,6 +148,7 @@ def subtract_vec_vec(pos1, pos2, entityName=''):
     plug(pos2, sub_op.signal('sin2'))
     return sub_op.sout
 
+
 def transpose_mat(mat, entityName=''):
     """
     ## This function transposes a matrix
@@ -150,6 +157,7 @@ def transpose_mat(mat, entityName=''):
     op = MatrixTranspose(entityName)
     plug(mat, op.sin)
     return op.sout
+
 
 def multiply_mat_vec(mat,vec, entityName=''):
     """
@@ -162,6 +170,7 @@ def multiply_mat_vec(mat,vec, entityName=''):
     plug(vec, mat_mul.signal('sin2'))
     return mat_mul.sout
 
+
 def mul_double_vec(doub, vec, entityName=''):
     """
     ## This function multiplies a double and vector
@@ -172,6 +181,7 @@ def mul_double_vec(doub, vec, entityName=''):
     mul.sin1.value = doub
     plug(vec, mul.signal('sin2'))
     return mul.sout
+
 
 def mul_vec_vec(vec1, vec2, entityName):
     """
@@ -184,7 +194,8 @@ def mul_vec_vec(vec1, vec2, entityName):
     return vec_mul.sout
 
 
-    ######################### Robotics operators ##################################
+######################### Robotics operators ##################################
+
 
 def hom2pos(robot_joint_signal, entityName=''):
     """
@@ -194,6 +205,7 @@ def hom2pos(robot_joint_signal, entityName=''):
     conv_pos = MatrixHomoToPose(entityName)
     plug(robot_joint_signal, conv_pos.signal('sin'))
     return conv_pos.signal('sout')
+
 
 def convert_quat_se3(quat, entityName):
     """
@@ -206,8 +218,8 @@ def convert_quat_se3(quat, entityName):
     return quat_to_se3.signal('sout')
 
 
+######################### Standard vectors ####################################
 
-    ######################### Standard vectors ####################################
 
 def zero_vec(vec_size, entityName):
     """
