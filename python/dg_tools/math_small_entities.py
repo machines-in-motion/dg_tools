@@ -23,18 +23,67 @@ from dynamic_graph.sot.core.math_small_entities import (
     Multiply_matrix_vector,
     MatrixTranspose,
     MatrixHomoToPose,
-    # Component_of_vector,
-    # Selec_of_vector,
+    Component_of_vector,
+    Selec_of_vector,
     Stack_of_vector,
+    Multiply_of_double,
 )
 # from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
 # from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 
 
+def stack_zero(vec, entityName=''):
+    """
+    ## This function stacks a zeros before the vector
+    ## Input : Constant vector (not numpy arrays)
+          : Constant vector (not numpy arrays)
+          : size of first vector (int)
+          : size of first vector (int)
+    """
+    zero = VectorConstant("zero")
+    zero.sout.value = (0.,)
+
+    op = Stack_of_vector(entityName)
+    op.selec1(0, 1)
+    op.selec2(0, 2)
+    plug(zero.sout, op.sin1)
+    plug(vec, op.sin2)
+    return op.sout
+
+
+def add_doub_doub_2(db1, db2, entityName):
+    add = Add_of_double(entityName)
+    plug(db1, add.signal('sin1'))
+    plug(db2, add.signal('sin2'))
+    return add.sout
+
+
+def mul_double_vec_2(doub, vec, entityName):
+    # need double as a signal
+    mul = Multiply_double_vector(entityName)
+    plug(doub, mul.signal('sin1'))
+    plug(vec, mul.signal('sin2'))
+    return mul.sout
+
+
+def scale_values(double, scale, entityName):
+    mul = Multiply_of_double(entityName)
+    mul.sin0.value = scale
+    plug(double, mul.sin1)
+    return mul.sout
+
+
+def mul_doub_doub(db1, db2, entityName):
+    dif1 = Multiply_of_double(entityName)
+    plug(db1, dif1.sin0)
+    plug(db2, dif1.sin1)
+    return dif1.sout
+
+
 #
 # Initialisers
 #
-class ConstVector(object):
+class ConstantVector(object):
     """
     Define a nice interface to create constant vector
     """
@@ -71,7 +120,7 @@ def matrixConstant(val):
     return op
 
 
-class DoubleConstant(object):
+class ConstantDouble(object):
     """
     Fake an entity which provide a constant double
 
@@ -132,23 +181,28 @@ def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=''):
     return op.signal('sout')
 
 
-def stack_zero(vec, entityName=''):
+class StackZero(object):
     """
-    ## This function stacks a zeros before the vector
-    ## Input : Constant vector (not numpy arrays)
-          : Constant vector (not numpy arrays)
-          : size of first vector (int)
-          : size of first vector (int)
+    This function stacks a zero before the vector
+    Input : number of zeroes you want to stack up (int)
+          : vector you want to stack the zeroes on top
+          : size of vector (int)
     """
-    zero = VectorConstant("zero")
-    zero.sout.value = (0.,)
 
-    op = Stack_of_vector(entityName)
-    op.selec1(0, 1)
-    op.selec2(0, 2)
-    plug(zero.sout, op.sin1)
-    plug(vec, op.sin2)
-    return op.sout
+    def __init__(self, nb_0, vec_size, vec=None, prefix=''):
+        self.zero = VectorConstant("zero")
+        self.zero.sout.value = nb_0 * (0.,)
+
+        self.op = Stack_of_vector(prefix + 'zero_stacker')
+        self.op.selec1(0, nb_0)
+        self.op.selec2(0, vec_size)
+        plug(self.zero.sout, self.op.sin1)
+
+        if vec is not None:
+            plug(vec, self.op.sin2)
+
+        self.sin = self.op.sin2
+        self.sout = self.op.sout
 
 
 def selec_vector(vec, start_index, end_index, entityName=''):

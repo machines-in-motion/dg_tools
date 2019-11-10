@@ -125,11 +125,11 @@ class Sliders(object):
             self.__dict__[slider_offset].sin2.value = [offset]
 
     def trace(self, robot):
-        self.robot.add_trace(self.prefix + "sliders_fir_filter", "sout")
+        robot.add_trace(self.prefix + "sliders_fir_filter", "sout")
         for i, slider_letter in enumerate(
                 list(string.ascii_uppercase[:self.nb_sliders])):
             # names
             slider_name = "slider_" + slider_letter
             slider_component = slider_name + "_Component_of_vector"
             slider_component_entity_name = self.prefix + slider_component
-            self.robot.add_trace(slider_component_entity_name, "sout")
+            robot.add_trace(slider_component_entity_name, "sout")
