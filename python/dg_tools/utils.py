@@ -19,6 +19,7 @@ import rospkg
 from dynamic_graph import plug
 from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.operator import *
+from dynamic_graph.sot.core.math_small_entities import *
 from dynamic_graph.sot.core.vector_constant import VectorConstant
 from dynamic_graph.sot.core.matrix_constant import MatrixConstant
 from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
@@ -45,6 +46,18 @@ dg.plug = dg_plug_dbg
 
 ################### Initialisers #############################################
 
+def constDouble(val, entityName=''):
+    """Creates a constant double value operator.
+
+    Args:
+        val: (double) Constant value to use
+        entityName: (str, optional) Name of entity.
+    Returns:
+        Constant double signal.
+    """
+    sig = Add_of_double(entityName).sout
+    sig.value = val
+    return sig
 
 def constVector(val, entityName=''):
     """
@@ -54,7 +67,6 @@ def constVector(val, entityName=''):
     op = VectorConstant(entityName).sout
     op.value = list(val)
     return op
-
 
 def constMatrix(val, entityName):
     """
