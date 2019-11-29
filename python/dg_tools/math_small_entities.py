@@ -61,7 +61,10 @@ def add_doub_doub_2(db1, db2, entityName):
 def mul_double_vec_2(doub, vec, entityName):
     # need double as a signal
     mul = Multiply_double_vector(entityName)
-    plug(doub, mul.signal('sin1'))
+    if isinstance(doub, float):
+        mul.sin1.value = doub
+    else:
+        plug(doub, mul.signal('sin1'))
     plug(vec, mul.signal('sin2'))
     return mul.sout
 
