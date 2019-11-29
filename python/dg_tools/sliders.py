@@ -25,7 +25,7 @@ class Sliders(object):
     This class filter the sliders signals from the hardware.
     """
 
-    def __init__(self, nb_sliders, prefix=""):
+    def __init__(self, nb_sliders, prefix="", filter_size=400):
         """
         Initialize the class by creating all the output signals
         """
@@ -36,7 +36,7 @@ class Sliders(object):
         self.prefix = prefix
 
         # First of all we filter the sliders data
-        self.filter_size = 400
+        self.filter_size = filter_size
         self.sliders_filtered = FIRFilter_Vector_double(self.prefix +
                                                         "sliders_fir_filter")
         self.sliders_filtered.setSize(self.filter_size)
@@ -123,6 +123,14 @@ class Sliders(object):
             slider_offset = slider_name + "_offset"
             # set the offset
             self.__dict__[slider_offset].sin2.value = [offset]
+
+    def plug_slider_signal(self, slider_positions_sig):
+        plug(slider_positions_sig, self.sin)
+
+        # Fillup the `self.sliders_filtered` with the initial value to
+        # avoid jumping at the beginning.
+        for i in range(self.filter_size):
+            self.sliders_filtered.sout.recompute(i)
 
     def trace(self, robot):
         robot.add_trace(self.prefix + "sliders_fir_filter", "sout")
