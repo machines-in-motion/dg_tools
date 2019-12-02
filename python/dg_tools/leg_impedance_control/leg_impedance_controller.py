@@ -15,6 +15,7 @@ from dg_tools.traj_generators import mul_double_vec_2
 
 from py_robot_properties_teststand.config import TeststandConfig
 import dynamic_graph.sot.dynamics_pinocchio as dp
+from dynamic_graph.sot.core.switch import SwitchVector
 
 
 #############################################################################
@@ -51,11 +52,82 @@ class LegImpedanceController():
         control_torques = multiply_mat_vec(
             jacT, errors, "compute_control_torques_" + self.leg_name)
 
-        # selecting the torques to be plugged to the robot
+
+        self.friction = mul_double_vec(-0.00001341 * 81 * 0, self.robot_dg.velocity, "friction")
+
+        self.v_negative_one = constVector([-1.0,], "v_negative_one")
+        self.v_one = constVector([1.0,],"v_one")
+        self.v_zero = constVector([0.0, ], "d_zero")
+
+        ### Setup the switches
+        self.sel_v1 = Selec_of_vector("sel_v1" + self.leg_name)
+        self.sel_v1.selec(1, 2)
+        plug(self.robot_dg.velocity, self.sel_v1.sin)
+
+        self.compare1 = CompareVector("compare1")
+        plug(self.v_zero, self.compare1.sin1)
+        plug(self.sel_v1.sout, self.compare1.sin2)
+
+
+        self.v_negative_vel1 = mul_vec_vec(self.v_negative_one, self.sel_v1.sout, "negative_vel1")
+
+        self.switch1 = SwitchVector("switch1")
+        self.switch1.setSignalNumber(2)
+        plug(self.v_one, self.switch1.sin0)
+        plug(self.v_negative_one, self.switch1.sin1)
+        plug(self.compare1.sout, self.switch1.boolSelection)
+
+        self.sel_v2 = Selec_of_vector("sel_v2" + self.leg_name)
+        self.sel_v2.selec(2, 3)
+        plug(self.robot_dg.velocity, self.sel_v2.sin)
+
+        self.compare2 = CompareVector("compare2")
+        plug(self.v_zero, self.compare2.sin1)
+        plug(self.sel_v2.sout, self.compare2.sin2)
+
+        self.v_negative_vel2 = mul_vec_vec(self.v_negative_one, self.sel_v2.sout, "negative_vel2")
+
+
+        self.switch2 = SwitchVector("switch1")
+        self.switch2.setSignalNumber(2)
+        plug(self.v_one, self.switch2.sin0)
+        plug(self.v_negative_one, self.switch2.sin1)
+        plug(self.compare2.sout, self.switch2.boolSelection)
+
+        self.semi_vel = stack_two_vectors(self.switch1.sout, self.switch2.sout, 1, 1)#, "semi1")
+        self.vel = stack_two_vectors(constVector([0.0, ], "z"), self.semi_vel, 1, 2)#, "vel")
+
+        self.friction2 = mul_double_vec(0.00540994 * 9, self.vel, "friction2")
+
+        self.newjac = Selec_of_matrix("new_jac")
+        self.newjac.selecRows(0, 3)
+        self.newjac.selecCols(0, 3)
+        plug(self.jac, self.newjac.sin)
+
+        self.jacT = transpose_mat(self.jac, "jacT")
+        self.jacTI = Inverse_of_matrix("jacTI")
+        plug(self.jacT, self.jacTI.sin)
+
+        c1 = constVector([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], "c1")
+        c2 = constVector([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], "c2")
+        c3 = constVector([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], "c3")
+        mc1 = multiply_mat_vec(self.jacT, c1, "mc1")
+        mc2 = multiply_mat_vec(self.jacT, c2, "mc2")
+        mc3 = multiply_mat_vec(self.jacT, c3, "mc3")
+
+        self.final2 = multiply_mat_vec(self.jacTI.sout, self.friction2, "final2")
+
+
+
+        ## selecting the torques to be plugged to the robot
         sel = Selec_of_vector("impedance_torques_" + self.leg_name)
-        sel.selec(start_index, end_index)
+        sel.selec(start_index - 1, end_index)
         plug(control_torques, sel.signal('sin'))
-        return sel.signal('sout')
+
+        sel2 = Selec_of_vector("sel_torque_" + self.leg_name)
+        sel2.selec(start_index, end_index)
+        plug(add_vec_vec(sel.sout, self.friction, "torque"), sel2.sin)
+        return sel2.sout
 
     def return_leg_length(self):
         '''
