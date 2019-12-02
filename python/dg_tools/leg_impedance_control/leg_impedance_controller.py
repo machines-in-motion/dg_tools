@@ -56,8 +56,8 @@ class LegImpedanceController():
         self.friction = mul_double_vec(-0.00001341 * 81 * 0, self.robot_dg.velocity, "friction")
 
         self.v_negative_one = constVector([-1.0,], "v_negative_one")
-        self.v_one = constVector([1.0,],"v_one")
-        self.v_zero = constVector([0.0, ], "d_zero")
+        self.v_one = constVector([1.0, ], "v_one")
+        self.v_zero = constVector([0.0, ], "v_zero")
 
         ### Setup the switches
         self.sel_v1 = Selec_of_vector("sel_v1" + self.leg_name)
@@ -116,8 +116,6 @@ class LegImpedanceController():
         mc3 = multiply_mat_vec(self.jacT, c3, "mc3")
 
         self.final2 = multiply_mat_vec(self.jacTI.sout, self.friction2, "final2")
-
-
 
         ## selecting the torques to be plugged to the robot
         sel = Selec_of_vector("impedance_torques_" + self.leg_name)
