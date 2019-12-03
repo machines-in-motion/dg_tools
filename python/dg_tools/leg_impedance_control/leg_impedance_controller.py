@@ -38,6 +38,8 @@ class LegImpedanceController():
 
         self.joint_positions_sin = self.robot_dg.position
         self.joint_velocities_sin = self.robot_dg.velocity
+        self.ati = Multiply_of_vector("ATI")
+        plug(constVector([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "v_one"), self.ati.sin0)
 
     def _compute_control_torques(self, start_index=1, end_index=3):
         '''
@@ -47,8 +49,8 @@ class LegImpedanceController():
         '''
         jacT = transpose_mat(self.jac, "jacTranspose" + self.leg_name)
         # multiplying negative
-        errors = mul_double_vec(-1.0, self.total_error,
-                                "neg_op_" + self.leg_name)
+        errors = mul_double_vec(-1.0, self.total_error_with_force,
+                                "neg_op_" + self.leg_name)###########self.total_error
         control_torques = multiply_mat_vec(
             jacT, errors, "compute_control_torques_" + self.leg_name)
 
@@ -95,7 +97,7 @@ class LegImpedanceController():
         plug(self.compare2.sout, self.switch2.boolSelection)
 
         self.semi_vel = stack_two_vectors(self.switch1.sout, self.switch2.sout, 1, 1)#, "semi1")
-        self.vel = stack_two_vectors(constVector([0.0, ], "z"), self.semi_vel, 1, 2)#, "vel")
+        self.vel = stack_two_vectors(constVector([0.0, ], "zero1"), self.semi_vel, 1, 2)#, "vel")
 
         self.friction2 = mul_double_vec(0.00540994 * 9, self.vel, "friction2")
 
@@ -144,7 +146,7 @@ class LegImpedanceController():
             [0.0, 0.0, 0.0], 'stack_to_wrench_' + self.leg_name), 3, 3)
         return self.rel_pos_foot
 
-    def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None):
+    def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None, kfe=None):
         '''
         ## Impedance controller implementation. Creates a virtual spring
         ## damper system the base and foot of the leg
@@ -208,7 +210,10 @@ class LegImpedanceController():
 
             self.estimated_foot_force = add_vec_vec(pos_error_with_gains, zero_vec(
                 6, "zero_vec_est_f" + self.leg_name), "est_f_" + self.leg_name)
-
+        mul_kfe = Multiply_double_vector("Kfe_" + self.leg_name)
+        plug(kfe, mul_kfe.sin1)
+        plug(add_vec_vec(self.ati.sout, fff, "force_error_" + self.leg_name), mul_kfe.sin2)
+        self.total_error_with_force = add_vec_vec(self.total_error, mul_kfe.sout, "total_error_with_force_" + self.leg_name)
         control_torques = self._compute_control_torques()
 
         return control_torques
