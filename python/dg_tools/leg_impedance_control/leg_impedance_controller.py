@@ -39,9 +39,9 @@ class LegImpedanceController():
         self.joint_positions_sin = self.robot_dg.position
         self.joint_velocities_sin = self.robot_dg.velocity
         self.ati = Multiply_of_vector("ATI")
-        plug(constVector([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "v_one"), self.ati.sin0)
+        plug(constVector([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "one6"), self.ati.sin0)
 
-    def _compute_control_torques(self, start_index=1, end_index=3):
+    def _compute_control_torques(self, RNEADM, start_index=1, end_index=3):
         '''
         ## computes torques tau = JacT*(errors)
         ## Input : start_index (to select actuated torques to plug ot the robot)
@@ -127,7 +127,8 @@ class LegImpedanceController():
         sel2 = Selec_of_vector("sel_torque_" + self.leg_name)
         sel2.selec(start_index, end_index)
         plug(add_vec_vec(sel.sout, self.friction, "torque"), sel2.sin)
-        return sel2.sout
+        self.final3 = add_vec_vec(sel2.sout, RNEADM, "final3")
+        return self.final3
 
     def return_leg_length(self):
         '''
@@ -146,7 +147,7 @@ class LegImpedanceController():
             [0.0, 0.0, 0.0], 'stack_to_wrench_' + self.leg_name), 3, 3)
         return self.rel_pos_foot
 
-    def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None, kfe=None):
+    def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None, kfe=None, RNEADM=None):
         '''
         ## Impedance controller implementation. Creates a virtual spring
         ## damper system the base and foot of the leg
@@ -210,11 +211,10 @@ class LegImpedanceController():
 
             self.estimated_foot_force = add_vec_vec(pos_error_with_gains, zero_vec(
                 6, "zero_vec_est_f" + self.leg_name), "est_f_" + self.leg_name)
-        mul_kfe = Multiply_double_vector("Kfe_" + self.leg_name)
-        plug(kfe, mul_kfe.sin1)
-        plug(add_vec_vec(self.ati.sout, fff, "force_error_" + self.leg_name), mul_kfe.sin2)
-        self.total_error_with_force = add_vec_vec(self.total_error, mul_kfe.sout, "total_error_with_force_" + self.leg_name)
-        control_torques = self._compute_control_torques()
+        mul_kfe = mul_vec_vec(kfe, subtract_vec_vec(self.total_error, self.ati.sout, "force_error_" + self.leg_name), "Kfe_" + self.leg_name)
+        #it is as easy as change self.total_error to fff:)
+        self.total_error_with_force = add_vec_vec(self.total_error, mul_kfe, "total_error_with_force_" + self.leg_name)
+        control_torques = self._compute_control_torques(RNEADM)
 
         return control_torques
 
