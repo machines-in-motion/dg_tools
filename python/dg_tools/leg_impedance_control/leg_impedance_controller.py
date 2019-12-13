@@ -36,8 +36,12 @@ class LegImpedanceController():
         print("Warning: Robot acceleration has been set to zero")
         self.robot_dg.acceleration.value = 3 * (0.0, )
 
-        self.joint_positions_sin = self.robot_dg.position
-        self.joint_velocities_sin = self.robot_dg.velocity
+        self.joint_positions = Selec_of_vector("joint_position")
+        self.joint_positions.selec(1, 3)
+        plug(self.robot_dg.position, self.joint_positions.sin)
+        self.joint_velocities = Selec_of_vector("joint_velocity")
+        self.joint_velocities.selec(1, 3)
+        plug(self.robot_dg.velocity, self.joint_velocities.sin)
         self.ati = Multiply_of_vector("ATI")
         plug(constVector([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "one6"), self.ati.sin0)
 
@@ -217,6 +221,20 @@ class LegImpedanceController():
         control_torques = self._compute_control_torques(RNEADM)
 
         return control_torques
+
+    def return_joint_ctrl_torques(self, kp_joint, des_joint_pos, kd_joint, des_joint_vel):
+        pos_error = subtract_vec_vec(des_joint_pos, self.joint_positions.sout, "joint_pos_error")
+        vel_error = subtract_vec_vec(des_joint_vel, self.joint_velocities.sout, "joint_vel_error")
+        mul_kp_gains = Multiply_of_vector("mul_kp_joint")
+        plug(kp_joint, mul_kp_gains.sin0)
+        plug(pos_error, mul_kp_gains.sin1)
+        pos_error_with_gains = mul_kp_gains.sout
+        mul_kd_gains = Multiply_of_vector("mul_kd_joint")
+        plug(kd_joint, mul_kd_gains.sin0)
+        plug(vel_error, mul_kd_gains.sin1)
+        vel_error_with_gains = mul_kd_gains.sout
+        jtorque = add_vec_vec(pos_error_with_gains, vel_error_with_gains, "joint_torque")
+        return jtorque
 
     def record_data(self, robot):
 
