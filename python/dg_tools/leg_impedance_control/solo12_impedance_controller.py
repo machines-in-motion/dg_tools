@@ -39,7 +39,7 @@ class Solo12LegImpedanceController(object):
         self.robot_dg.createPosition('pos_hip_' + self.leg_name, self.leg_name + '_HAA')
         self.robot_dg.createPosition('pos_foot_' + self.leg_name, self.leg_name + '_ANKLE')
 
-        self.robot_dg.acceleration.value = 12 * (0.0, )
+        self.robot_dg.acceleration.value = 18 * (0.0, )
         self.joint_positions_sin = self.robot_dg.position
         self.joint_velocities_sin = self.robot_dg.velocity
 
