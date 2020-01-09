@@ -19,14 +19,45 @@ import rospkg
 from dynamic_graph import plug
 from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.operator import *
+from dynamic_graph.sot.core.math_small_entities import *
 from dynamic_graph.sot.core.vector_constant import VectorConstant
 from dynamic_graph.sot.core.matrix_constant import MatrixConstant
 from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
 from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 
+################### Plug helper #############################################
+
+# To track down implemenation bugs faster, check the arguments to `dg.plug` are
+# actual signals. If not, raise an error.
+#
+# SEE: https://github.com/stack-of-tasks/dynamic-graph-python/issues/36
+
+plug_ = dg.plug
+def dg_plug_dbg(sig0, sig1):
+    def assert_signal(sig):
+        if not isinstance(sig, dg.signal_base.SignalBase):
+            raise ValueError(
+                'dynamic_graph.plug(): Passed in value is not a signal. sig=' +
+                str(sig), sig)
+    assert_signal(sig0)
+    assert_signal(sig1)
+    plug_(sig0, sig1)
+dg.plug = dg_plug_dbg
 
 ################### Initialisers #############################################
 
+def constDouble(val, entityName=''):
+    """Creates a constant double value operator.
+
+    Args:
+        val: (double) Constant value to use
+        entityName: (str, optional) Name of entity.
+    Returns:
+        Constant double signal.
+    """
+    sig = Add_of_double(entityName).sout
+    sig.value = val
+    return sig
 
 def constVector(val, entityName=''):
     """
@@ -36,7 +67,6 @@ def constVector(val, entityName=''):
     op = VectorConstant(entityName).sout
     op.value = list(val)
     return op
-
 
 def constMatrix(val, entityName):
     """
