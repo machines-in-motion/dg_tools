@@ -14,9 +14,19 @@ import dynamic_graph.sot.dynamics_pinocchio as dp
 import dynamic_graph as dg
 from dg_tools.utils import *
 
+from dg_tools.leg_impedance_control.quad_leg_impedance_controller import QuadrupedComControl
+
 from dynamic_graph.sot.core.math_small_entities import (
     Selec_of_matrix
 )
+
+class Solo12ComController(QuadrupedComControl):
+    def init_robot_properties(self):
+        self.robot_vicon_name = "solo12"
+        self.robot_mass = 3 * [Solo12Config.mass]
+
+        # TODO: Provide the new base inertia here.
+        self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
 
 class Solo12LegImpedanceController(object):
     """Impedance controller for single leg on solo12."""
@@ -36,7 +46,7 @@ class Solo12LegImpedanceController(object):
 
         self.robot_dg.createJacobianEndEffWorld(
             'jac_cnt_' + self.leg_name, self.leg_name + '_ANKLE')
-        self.robot_dg.createPosition('pos_hip_' + self.leg_name, self.leg_name + '_HAA')
+        self.robot_dg.createPosition('pos_hip_' + self.leg_name, self.leg_name + '_HFE')
         self.robot_dg.createPosition('pos_foot_' + self.leg_name, self.leg_name + '_ANKLE')
 
         self.robot_dg.acceleration.value = 18 * (0.0, )
@@ -80,7 +90,7 @@ class Solo12LegImpedanceController(object):
             self.jacT, errors, "compute_control_torques_" + self.leg_name)
         return control_torques
 
-    def compute_control_torques(self, kp, kd, kf, des_pos, des_vel, fff):
+    def compute_control_torques(self, kp, kd, kf, des_pos, des_vel, fff, pos_global=False):
         """
         Impedance controller implementation. Creates a virtual spring
         damper system the base and foot of the leg
@@ -92,6 +102,8 @@ class Solo12LegImpedanceController(object):
             des_vel: desired velocity (size : 1*6 )
             Kf: feed forward force gain (safety)
             fff: feed forward force (size : 1*6)
+            pos_global: If true, assume the des_pos is in global world coordinates.
+               Otherwise, use local coordinate system of the
         Returns:
 
         """
@@ -102,11 +114,18 @@ class Solo12LegImpedanceController(object):
         self.rct_args["des_vel"] = des_vel
         self.rct_args["kf"] = kf
         self.rct_args["fff"] = fff
+        self.rct_args["pos_global"] = pos_global
 
         self.jac = self._compute_jacobian()
         self.rel_pos_foot = self._compute_leg_length()
-        self.pos_error = subtract_vec_vec(
-            self.rel_pos_foot, des_pos, "pos_error_" + self.leg_name)
+
+        if pos_global:
+            self.pos_error = subtract_vec_vec(
+                stack_two_vectors(self.xyzpos_foot, constVector(
+                    [0.0, 0.0, 0.0], ''), 3, 3), des_pos, "pos_error_" + self.leg_name)
+        else:
+            self.pos_error = subtract_vec_vec(
+                self.rel_pos_foot, des_pos, "pos_error_" + self.leg_name)
         mul_kp_gains_split = Multiply_of_vector("kp_split_" + self.leg_name)
         plug(kp, mul_kp_gains_split.sin0)
         plug(self.pos_error, mul_kp_gains_split.sin1)
@@ -212,7 +231,7 @@ class Solo12ImpedanceController(object):
             return selec_vector(vec, 6 * leg_idx, 6 * leg_idx + 6, name)
 
     def compute_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None,
-                                base_position=None, base_velocity=None):
+                                base_position=None, base_velocity=None, pos_global=False):
         """ Computes the desired joint torques for desired configuration using impedance controller.
 
         If no base position or velocity is provided, assume the base if fixed at the origin.
@@ -223,8 +242,10 @@ class Solo12ImpedanceController(object):
             Kd: derivative gain (double)
             des_vel: (1*24 vector) desired_velocity in current time step
             fff: (1*24 vector) Feed forward force
-            base_position: (1*7 vector, optional) Base position (translation + rotation/quaternion)
+            base_position: (1*7 vector, optional) Base position (translation + quaternion)
             base_velocity: (1*6 vector, optional) Base velocity (translation + rotation)
+            pos_global: If true, track des_pos in global frame.
+                Requires base_position and base_velocity to be set.
         Returns:
             Final joint torques (1 * 12 vector)
         """
@@ -233,10 +254,13 @@ class Solo12ImpedanceController(object):
 
         # If no base information is provided, assume the base is fixed.
         if base_position is None or base_velocity is None:
-            base_position = constVector([0, 0, 0, 0, 0, 0])
+            base_position = constVector([0, 0, 0, 0, 0, 0, 0])
             base_velocity = constVector([0, 0, 0, 0, 0, 0])
 
-        self.robot_position = stack_two_vectors(base_position, self.joint_positions, 6, 12)
+        # Convert the base_position into PoseRPY
+        base_pose_rpy = basePoseQuat2PoseRPY(base_position)
+
+        self.robot_position = stack_two_vectors(base_pose_rpy, self.joint_positions, 6, 12)
         self.robot_velocity = stack_two_vectors(base_velocity, self.joint_velocities, 6, 12)
 
         for leg_idx, imp_controller in enumerate(self.leg_imp_ctrl):
@@ -248,7 +272,8 @@ class Solo12ImpedanceController(object):
             imp_controller.compute_control_torques(kp, kd, kf,
                 self._slice_vec(des_pos, leg_idx, 'des_pos_slice_' + leg_name),
                 self._slice_vec(des_vel, leg_idx, 'des_vel_slice_' + leg_name),
-                self._slice_vec(fff, leg_idx, 'fff_slice_' + leg_name))
+                self._slice_vec(fff, leg_idx, 'fff_slice_' + leg_name),
+                pos_global=pos_global)
 
         # Combine the computed torques from the impedance controllers into single torque vector.
         self.control_torques = stack_two_vectors(
@@ -262,3 +287,29 @@ class Solo12ImpedanceController(object):
         )
 
         return self.control_torques
+
+    def compute_abs_end_eff_pos(self):
+        """Returns the endeffector positions wrt com position in world frame.
+
+        Returns:
+          Signal<dg::Vector, size=12> Stack of the four endeffector positions
+        """
+        com_signal = self.leg_imp_ctrl[0].robot_dg.com
+
+        self.abs_end_eff_pos = stack_two_vectors(
+            stack_two_vectors(
+                subtract_vec_vec(self.leg_imp_ctrl[0].xyzpos_foot, com_signal),
+                subtract_vec_vec(self.leg_imp_ctrl[1].xyzpos_foot, com_signal),
+                3, 3),
+            stack_two_vectors(
+                subtract_vec_vec(self.leg_imp_ctrl[2].xyzpos_foot, com_signal),
+                subtract_vec_vec(self.leg_imp_ctrl[3].xyzpos_foot, com_signal),
+                3, 3),
+            6, 6
+        )
+
+        return self.abs_end_eff_pos
+
+    def record_data(self):
+        for imp_controller in self.leg_imp_ctrl:
+            imp_controller.record_data(self.robot)

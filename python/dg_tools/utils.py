@@ -16,6 +16,10 @@ import os, os.path
 import numpy as np
 import rospkg
 
+from numbers import Number
+
+from dynamic_graph_manager.dg_tools import PoseQuaternionToPoseRPY
+
 from dynamic_graph import plug
 from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.operator import *
@@ -204,11 +208,14 @@ def multiply_mat_vec(mat,vec, entityName=''):
 def mul_double_vec(doub, vec, entityName=''):
     """
     ## This function multiplies a double and vector
-    ## Input : Constant double
-             : Constant vector (not numpy array)
+    ## Input : Double value or signal
+             : Vector signal
     """
     mul = Multiply_double_vector(entityName)
-    mul.sin1.value = doub
+    if isinstance(doub, Number):
+        mul.sin1.value = doub
+    else:
+        plug(doub, mul.sin1)
     plug(vec, mul.signal('sin2'))
     return mul.sout
 
@@ -246,6 +253,12 @@ def convert_quat_se3(quat, entityName):
     quat_to_se3 = QuaternionToMatrix(entityName)
     plug(quat, quat_to_se3.signal('sin'))
     return quat_to_se3.signal('sout')
+
+
+def basePoseQuat2PoseRPY(q_base, entityName=''):
+    op = PoseQuaternionToPoseRPY(entityName)
+    plug(q_base, op.sin)
+    return op.sout
 
 
 ######################### Standard vectors ####################################

@@ -165,9 +165,9 @@ class QuadrupedComControl():
         self.EntityName = EntityName
         self.client_name = client_name
         self.host_name_quadruped = vicon_ip
-        self.robot_vicon_name = "quadruped"
+        self.init_robot_properties()
 
-        self.vicon_client = ViconClientEntity(self.client_name)
+        self.vicon_client = ViconClientEntity('vicon_' + self.client_name)
         self.vicon_client.connect_to_vicon(self.host_name_quadruped)
         self.vicon_client.displaySignals()
 
@@ -175,16 +175,24 @@ class QuadrupedComControl():
 
         try:
             ## comment out if running on real robot
-            self.vicon_client.robot_wrapper(robot)
+            self.vicon_client.robot_wrapper(robot, self.robot_vicon_name)
         except:
             print("not in simulation")
 
 
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_position")
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_velocity_body")
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_velocity_world")
+        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
+        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
+        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
 
         self.com_imp_ctrl = ComImpedanceControl(EntityName)
+
+        self._biased_base_position = None
+        self._biased_base_velocity = None
+
+    def init_robot_properties(self):
+        self.robot_vicon_name = "quadruped"
+        self.robot_mass = [2.17784, 2.17784, 2.17784]
+        self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
 
     def compute_torques(self, Kp, des_pos, Kd, des_vel, des_fff):
 
@@ -206,7 +214,7 @@ class QuadrupedComControl():
         plug(des_fff, self.com_imp_ctrl.des_fff)
         ### mass in all direction (double to vec returns zero)
         ## TODO : Check if there is dynamicgraph::double
-        self.com_imp_ctrl.mass.value = [2.17784, 2.17784, 2.17784]
+        self.com_imp_ctrl.mass.value = self.robot_mass
 
         self.control_switch_pos = SwitchVector("control_switch_pos")
         self.control_switch_pos.setSignalNumber(2) # we want to switch between 2 signals
@@ -255,9 +263,35 @@ class QuadrupedComControl():
 
         return self.com_imp_ctrl.angtau
 
-
     def set_bias(self):
         self.control_switch_pos.selection.value = 1
+
+    def get_biased_base_position(self):
+        """
+        Return the robot position taking the bias offset into account.
+
+        Returns:
+            Signal<dg::vector> of size 7 (0:3 translation, 3:7 quaternion orientation)
+        """
+        if self._biased_base_position is None:
+            self._biased_base_position = stack_two_vectors(self.biased_base_pos_xyz,
+                    self.base_orientation, 3, 4)
+        return self._biased_base_position
+
+    def get_biased_base_velocity(self):
+        """
+        Return the robot velocity taking the bias offset into account.
+
+        Returns:
+            Signal<dg::vector> of size 6 (0:3 translation, 3:6 rpy orientation)
+        """
+        if self._biased_base_velocity is None:
+            self._biased_base_velocity = stack_two_vectors(self.biased_base_vel_xyz,
+                    self.base_ang_vel_xyz, 3, 3)
+        return self._biased_base_velocity
+
+    def set_abs_end_eff_pos(self, abs_end_eff_pos_sig):
+        plug(abs_end_eff_pos_sig, self.com_imp_ctrl.abs_end_eff_pos)
 
     def threshold_cnt_sensor(self):
         plug(self.robot.device.contact_sensors, self.com_imp_ctrl.cnt_sensor)
@@ -490,7 +524,7 @@ class QuadrupedComControl():
         self.robot.add_trace(self.EntityName, "wbctrl")
         # self.robot.add_ros_and_trace(self.EntityName, "wbctrl")
 
-        self.robot.add_trace(self.EntityName, "lqrtau")
+        # self.robot.add_trace(self.EntityName, "lqrtau")
         # self.robot.add_ros_and_trace(self.EntityName, "lqrtau")
 
         # self.robot.add_trace(self.EntityName, "thr_cnt_sensor")
@@ -509,7 +543,7 @@ class QuadrupedComControl():
         # self.robot.add_ros_and_trace("biased_pos", "sout")
 
         #
-        # self.robot.add_trace("biased_vel", "sout")
+        self.robot.add_trace("biased_vel", "sout")
         # self.robot.add_ros_and_trace("biased_vel", "sout")
         # #
         # self.robot.add_trace("quad_com_ctrl", "lqrtau")
