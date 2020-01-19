@@ -362,9 +362,6 @@ dynamicgraph::Vector& ComImpedanceControl::
 
         tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
                       + vel_error.array()*Kd.array());
-
-
-        tau[1] = 0.0;
       }
 
     }
@@ -568,13 +565,9 @@ dynamicgraph::Vector& ComImpedanceControl::
       }
     }
     else{
+      isbiasset = 1;
       for(int i = 0 ; i < 3; i ++){
-        if(t < bias_time + t_start){
-            position_bias[i] += position[i]/bias_time;
-          }
-        else {
-          isbiasset = 1;
-        }
+        position_bias[i] = position[i];
         pos_bias[i] = position_bias[i];
       }
     }
@@ -612,13 +605,9 @@ dynamicgraph::Vector& ComImpedanceControl::
       }
     }
     else{
+      isbiasset = 1;
       for(int i = 0 ; i < 3; i ++){
-        if(t < bias_time + t_start){
-            velocity_bias[i] += velocity[i]/bias_time;
-          }
-        else {
-          isbiasset = 1;
-        }
+        velocity_bias[i] += velocity[i];
         vel_bias[i] = velocity_bias[i];
       }
     }
