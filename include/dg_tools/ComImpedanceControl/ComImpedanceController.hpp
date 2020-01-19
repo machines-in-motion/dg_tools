@@ -4,7 +4,7 @@
  * @license License BSD-3-Clause
  * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
  * @date 2019-03-19
- * 
+ *
  * @brief impedance controller implementation for COM (used for quadruped)
  */
 
@@ -88,6 +88,7 @@ namespace dynamicgraph{
         SignalPtr<dg::Vector, int> ci0SIN;
         SignalPtr<dg::Matrix, int> regSIN;
 
+        SignalPtr<dg::Vector, int> absendeffposSIN; // absolute end effector position from the plan 12d
         SignalPtr<dg::Vector, int> absendeffvelSIN; // absolute end effector velocity from the plan 12d
 
 
