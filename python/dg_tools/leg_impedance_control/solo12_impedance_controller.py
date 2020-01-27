@@ -56,8 +56,16 @@ class Solo12ComController(QuadrupedComControl):
         self.robot_vcom = multiply_mat_vec(
             self.robot_dg.Jcom, self.robot_velocity)
 
-        dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
-        dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
+        # dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
+        # dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
+
+
+    def return_com_torques(self, *args, **kwargs):
+        """
+        @return 12-dim vector with forces at each endeffector.
+        """
+        super(Solo12ComController, self).return_com_torques(*args, **kwargs)
+        return self.wb_ctrl
 
 
 class Solo12LegImpedanceController(object):
@@ -95,8 +103,6 @@ class Solo12LegImpedanceController(object):
         # Relative position of foot with respect to the base of the foot
         self.rel_pos_foot = subtract_vec_vec(
             self.xyzpos_foot, self.xyzpos_hip, "rel_pos_foot_" + self.leg_name)
-        self.rel_pos_foot = stack_two_vectors(self.rel_pos_foot, constVector(
-            [0.0, 0.0, 0.0], 'stack_to_wrench_' + self.leg_name), 3, 3)
         return self.rel_pos_foot
 
     def _compute_jacobian(self):
@@ -105,7 +111,7 @@ class Solo12LegImpedanceController(object):
         Returns: Jacobian at the endeffector, size 6 x 3 matrix.
         """
         jac_sub = Selec_of_matrix('jac_cnt_' + self.leg_name)
-        jac_sub.selecRows(0, 6)
+        jac_sub.selecRows(0, 3)
         jac_sub.selecCols(6 + self.joint_indices_range[0], 6 + self.joint_indices_range[1])
         dg.plug(self.robot_dg.signal("jac_cnt_" + self.leg_name), jac_sub.sin)
         return jac_sub.sout
@@ -130,10 +136,10 @@ class Solo12LegImpedanceController(object):
         Args
             Kp: proportional gain
             Kd: derivative gain
-            des_pos: desired position (size : 1*6 )
-            des_vel: desired velocity (size : 1*6 )
+            des_pos: desired position (size : 1*3 )
+            des_vel: desired velocity (size : 1*3 )
             Kf: feed forward force gain (safety)
-            fff: feed forward force (size : 1*6)
+            fff: feed forward force (size : 1*)
             pos_global: If true, assume the des_pos is in global world coordinates.
                Otherwise, use local coordinate system of the
         Returns:
@@ -153,8 +159,7 @@ class Solo12LegImpedanceController(object):
 
         if pos_global:
             self.pos_error = subtract_vec_vec(
-                stack_two_vectors(self.xyzpos_foot, constVector(
-                    [0.0, 0.0, 0.0], ''), 3, 3), des_pos, "pos_error_" + self.leg_name)
+                self.xyzpos_foot, des_pos, "pos_error_" + self.leg_name)
         else:
             self.pos_error = subtract_vec_vec(
                 self.rel_pos_foot, des_pos, "pos_error_" + self.leg_name)
@@ -249,17 +254,17 @@ class Solo12ImpedanceController(object):
         """ Helper for slicing the desired vector for a leg.
 
         Args:
-            vec: (1*24 vector or None) Vector to slice for a given leg
+            vec: (1*12 vector or None) Vector to slice for a given leg
             leg_idx: (int) Leg index to slice the vector for
             name: (str) Name for the slicing operator to use.
 
         Returns:
-            1*6 vector slice for the leg, None if vec was None.
+            1*3 vector slice for the leg, None if vec was None.
         """
         if vec is None:
             return None
         else:
-            return selec_vector(vec, 6 * leg_idx, 6 * leg_idx + 6, name)
+            return selec_vector(vec, 3 * leg_idx, 3 * leg_idx + 3, name)
 
     def compute_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None,
                                 base_position=None, base_velocity=None, pos_global=False):
@@ -269,10 +274,10 @@ class Solo12ImpedanceController(object):
 
         Args:
             Kp: (double) proportional gain (double)
-            des_pos: (1*24 vector) desired_position in current time step
+            des_pos: (1*12 vector) desired_position in current time step
             Kd: derivative gain (double)
-            des_vel: (1*24 vector) desired_velocity in current time step
-            fff: (1*24 vector) Feed forward force
+            des_vel: (1*12 vector) desired_velocity in current time step
+            fff: (1*12 vector) Feed forward force
             base_position: (1*7 vector, optional) Base position (translation + quaternion)
             base_velocity: (1*6 vector, optional) Base velocity (translation + rotation)
             pos_global: If true, track des_pos in global frame.

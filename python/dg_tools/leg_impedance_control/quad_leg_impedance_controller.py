@@ -157,7 +157,7 @@ class QuadrupedLegImpedanceController():
         self.imp_ctrl_leg_hr.record_data(self.robot)
 
 
-class QuadrupedComControl():
+class QuadrupedComControl(object):
     def __init__(self, robot, ViconClientEntity, client_name = "vicon_client" , vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl"):
 
         self.robot = robot
