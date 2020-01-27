@@ -16,6 +16,8 @@ from dg_tools.utils import *
 
 from dg_tools.leg_impedance_control.quad_leg_impedance_controller import QuadrupedComControl
 
+import dynamic_graph.sot.dynamics_pinocchio as dp
+
 from dynamic_graph.sot.core.math_small_entities import (
     Selec_of_matrix
 )
@@ -27,6 +29,36 @@ class Solo12ComController(QuadrupedComControl):
 
         # TODO: Provide the new base inertia here.
         self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
+
+    def track_com(self):
+        """Instead of tracking the biased base position and velocity, track the
+        biased com and vcom position.
+        """
+        # Init a dg pinocchio robot here for com and vcom computation.
+        self.robot_pin = Solo12Config.buildRobotWrapper()
+        self.robot_dg = dp.DynamicPinocchio('')
+        self.robot_dg.setModel(self.robot_pin.model)
+        self.robot_dg.setData(self.robot_pin.data)
+
+        self.robot_position = stack_two_vectors(
+            self.get_biased_base_position(),
+            self.robot.device.joint_positions, 6, 12)
+        self.robot_velocity = stack_two_vectors(
+            self.get_biased_base_velocity(),
+            self.robot.device.joint_velocities, 6, 12)
+
+        dg.plug(self.robot_position, self.robot_dg.position)
+        dg.plug(self.robot_velocity, self.robot_dg.velocity)
+        self.robot_dg.acceleration.value = 18 * [0.,]
+
+        # These are used in the reactive_stepper.
+        self.robot_com = self.robot_dg.com
+        self.robot_vcom = multiply_mat_vec(
+            self.robot_dg.Jcom, self.robot_velocity)
+
+        dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
+        dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
+
 
 class Solo12LegImpedanceController(object):
     """Impedance controller for single leg on solo12."""
@@ -202,7 +234,6 @@ class Solo12ImpedanceController(object):
     """
     def __init__(self, robot):
         self.robot = robot
-
         self.leg_imp_ctrl = []
         self.leg_idx = [[0, 3], [3, 6], [6, 9], [9, 12]]
         for leg_name, leg_idx in zip(['FL', 'FR', 'HL', 'HR'], self.leg_idx):
@@ -249,6 +280,7 @@ class Solo12ImpedanceController(object):
         Returns:
             Final joint torques (1 * 12 vector)
         """
+        # self.robot = robot
         self.joint_positions = self.robot.device.joint_positions
         self.joint_velocities = self.robot.device.joint_velocities
 

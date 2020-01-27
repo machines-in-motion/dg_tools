@@ -45,11 +45,7 @@ namespace dg_tools {
   /* --------------------------------------------------------------------- */
 
   /**
-   * @brief Upsamples the input data by holding the last value for a number of
-   * timesteps.
-   *
-   * Pulls the input signal only when the time signal is a multiplicative
-   * of the sampling factor.
+   * @brief Converts PoseQuaternion into PoseRPY data.
    */
   class Operator_EXPORTS PoseQuaternionToPoseRPY: public dg::Entity
   {
@@ -65,4 +61,66 @@ namespace dg_tools {
 
       dg::Vector& data_out_callback(dg::Vector& history, int time);
   };
+
+  /**
+   * @brief Given input data x, compute y = sin(x).
+   */
+  class Operator_EXPORTS SinEntity: public dg::Entity
+  {
+    public:
+
+      SinEntity( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<double,int> data_inputSIN;
+      dg::SignalTimeDependent<double,int> data_outSOUT;
+
+      double& data_out_callback(double& history, int time);
+  };
+
+  /**
+   * @brief Given input data sin1 and sin2, compute y = sin1/sin2.
+   */
+  class Operator_EXPORTS Division_of_double: public dg::Entity
+  {
+    public:
+
+      Division_of_double( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<double,int> data_input1SIN;
+      dg::SignalPtr<double,int> data_input2SIN;
+      dg::SignalTimeDependent<double,int> data_outSOUT;
+
+      double& data_out_callback(double& history, int time);
+  };
+
+
+  /**
+   * @brief Given input data, sum up the input data over time.
+   */
+  class Operator_EXPORTS VectorIntegrator: public dg::Entity
+  {
+    public:
+
+      VectorIntegrator( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      bool init_;
+      dg::Vector sum_;
+
+      dg::SignalPtr<dg::Vector,int> data_inputSIN;
+      dg::SignalTimeDependent<dg::Vector,int> data_outSOUT;
+
+      dg::Vector& data_out_callback(dg::Vector& out, int time);
+  };
+
 } // namespace dg_tools
+
+

@@ -19,6 +19,7 @@ from dynamic_graph.sot.core.math_small_entities import (
     Add_of_double,
     Add_of_vector,
     Multiply_double_vector,
+    Substract_of_double,
     Substract_of_vector,
     Multiply_matrix_vector,
     MatrixTranspose,
@@ -30,7 +31,6 @@ from dynamic_graph.sot.core.math_small_entities import (
 )
 # from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
 # from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
-
 
 def stack_zero(vec, entityName=''):
     """
@@ -78,7 +78,10 @@ def scale_values(double, scale, entityName):
 
 def mul_doub_doub(db1, db2, entityName):
     dif1 = Multiply_of_double(entityName)
-    plug(db1, dif1.sin0)
+    if isinstance(db1, float):
+        dif1.sin0.value = db1
+    else:
+        plug(db1, dif1.sin0)
     plug(db2, dif1.sin1)
     return dif1.sout
 

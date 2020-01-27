@@ -189,19 +189,19 @@ class QuadrupedComControl():
         self._biased_base_position = None
         self._biased_base_velocity = None
 
+        self.vicon_offset = constVector([0., 0., 0.,])
+
     def init_robot_properties(self):
         self.robot_vicon_name = "quadruped"
         self.robot_mass = [2.17784, 2.17784, 2.17784]
         self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
 
     def compute_torques(self, Kp, des_pos, Kd, des_vel, des_fff):
-
-
-        self.base_pos_xyz = selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_position"),
-                                        0, 3, "base_pos")
+        self.base_pos_xyz =  add_vec_vec(
+            selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_position"),
+                         0, 3, "base_pos"), self.vicon_offset)
         self.base_vel_xyz = selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_velocity_body"),
                                         0, 3, "base_vel")
-
 
         plug(self.base_pos_xyz, self.com_imp_ctrl.position)
         plug(self.base_vel_xyz, self.com_imp_ctrl.velocity)
