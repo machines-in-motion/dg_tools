@@ -7,6 +7,10 @@
 @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
 @date 2019-11-27
 @brief Implement leg impedance controller and 4 leg control for solo12.
+
+Differences between solo8 and solo12 code:
+- Using 3-dim vector to specify desired position and velocity instead of 6-dim
+- Use kp and kd value for each leg separately
 """
 
 from robot_properties_solo.config import Solo12Config
@@ -56,8 +60,8 @@ class Solo12ComController(QuadrupedComControl):
         self.robot_vcom = multiply_mat_vec(
             self.robot_dg.Jcom, self.robot_velocity)
 
-        # dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
-        # dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
+        dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
+        dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
 
 
     def return_com_torques(self, *args, **kwargs):
@@ -306,7 +310,10 @@ class Solo12ImpedanceController(object):
             dg.plug(self.robot_velocity, imp_controller.robot_dg.velocity)
 
             # Plug the desired position, velocity and forces.
-            imp_controller.compute_control_torques(kp, kd, kf,
+            imp_controller.compute_control_torques(
+                self._slice_vec(kp, leg_idx, 'kp_' + leg_name),
+                self._slice_vec(kd, leg_idx, 'kd_' + leg_name),
+                kf,
                 self._slice_vec(des_pos, leg_idx, 'des_pos_slice_' + leg_name),
                 self._slice_vec(des_vel, leg_idx, 'des_vel_slice_' + leg_name),
                 self._slice_vec(fff, leg_idx, 'fff_slice_' + leg_name),
