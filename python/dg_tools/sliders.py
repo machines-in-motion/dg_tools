@@ -132,6 +132,8 @@ class Sliders(object):
         for i in range(self.filter_size):
             self.sliders_filtered.sout.recompute(i)
 
+        import pdb; pdb.set_trace()
+
     def trace(self, robot):
         robot.add_trace(self.prefix + "sliders_fir_filter", "sout")
         for i, slider_letter in enumerate(

@@ -54,7 +54,7 @@ dg.plug = dg_plug_dbg
 
 ################### Initialisers #############################################
 
-def constDouble(val, entityName=''):
+def constDouble(val, entityName='', with_entity=False):
     """Creates a constant double value operator.
 
     Args:
@@ -66,9 +66,10 @@ def constDouble(val, entityName=''):
     sig = Add_of_double(entityName)
     sig.sin1.value = val
     sig.sin2.value = 0.
-    # HACK: Allows to plug other signals to this constant value later.
-    sig.sout.__dict__['sin'] = sig.sin1
-    return sig.sout
+    if with_entity:
+        return sig.sout, sig
+    else:
+        return sig.sout
 
 def constVector(val, entityName=''):
     """
