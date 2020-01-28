@@ -63,9 +63,12 @@ def constDouble(val, entityName=''):
     Returns:
         Constant double signal.
     """
-    sig = Add_of_double(entityName).sout
-    sig.value = val
-    return sig
+    sig = Add_of_double(entityName)
+    sig.sin1.value = val
+    sig.sin2.value = 0.
+    # HACK: Allows to plug other signals to this constant value later.
+    sig.sout.__dict__['sin'] = sig.sin1
+    return sig.sout
 
 def constVector(val, entityName=''):
     """
@@ -75,6 +78,14 @@ def constVector(val, entityName=''):
     op = VectorConstant(entityName).sout
     op.value = list(val)
     return op
+
+def vectorIdentity(vec1, vec_size, entityName):
+    """Entity to label a vector signal."""
+    add = Add_of_vector(entityName)
+    plug(vec1, add.signal('sin1'))
+    plug(constVector(vec_size * [0.,]), add.signal('sin2'))
+    return add.sout
+
 
 def constMatrix(val, entityName):
     """
@@ -244,7 +255,7 @@ class DoubleSignal(BaseOperatorSignal):
 #################### Operators ################################################
 
 
-def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
+def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=''):
     """
     ## This function stacks two vectors
     ## Input : Constant vector (not numpy arrays)
@@ -252,7 +263,7 @@ def stack_two_vectors(vec1, vec2, vec1_size, vec2_size):
           : size of first vector (int)
           : size of first vector (int)
     """
-    op = Stack_of_vector("")
+    op = Stack_of_vector(entityName)
     op.selec1(0, vec1_size)
     op.selec2(0, vec2_size)
     plug(vec1, op.signal('sin1'))
