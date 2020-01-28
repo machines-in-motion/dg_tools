@@ -249,6 +249,9 @@ class Solo12ImpedanceController(object):
             self.leg_imp_ctrl.append(
                 Solo12LegImpedanceController(leg_name, leg_idx))
 
+        self.abs_end_eff_pos = None
+        self.com_end_eff_pos = None
+
     def _compute_leg_control_torques(self, leg_idx, kp, kd, kf, des_pos, des_vel, fff):
         """
         """
@@ -290,6 +293,9 @@ class Solo12ImpedanceController(object):
             Final joint torques (1 * 12 vector)
         """
         # self.robot = robot
+        self.des_pos = vectorIdentity(des_pos, 12, "imp_ctrl_des_pos")
+        self.des_vel = vectorIdentity(des_vel, 12, "imp_ctrl_des_vel")
+        self.fff = vectorIdentity(fff, 12, "imp_ctrl_fff")
         self.joint_positions = self.robot.device.joint_positions
         self.joint_velocities = self.robot.device.joint_velocities
 
@@ -314,8 +320,8 @@ class Solo12ImpedanceController(object):
                 self._slice_vec(kp, leg_idx, 'kp_' + leg_name),
                 self._slice_vec(kd, leg_idx, 'kd_' + leg_name),
                 kf,
-                self._slice_vec(des_pos, leg_idx, 'des_pos_slice_' + leg_name),
-                self._slice_vec(des_vel, leg_idx, 'des_vel_slice_' + leg_name),
+                self._slice_vec(self.des_pos, leg_idx, 'des_pos_slice_' + leg_name),
+                self._slice_vec(self.des_vel, leg_idx, 'des_vel_slice_' + leg_name),
                 self._slice_vec(fff, leg_idx, 'fff_slice_' + leg_name),
                 pos_global=pos_global)
 
@@ -332,15 +338,18 @@ class Solo12ImpedanceController(object):
 
         return self.control_torques
 
-    def compute_abs_end_eff_pos(self):
+    def compute_com_end_eff_pos(self):
         """Returns the endeffector positions wrt com position in world frame.
 
         Returns:
           Signal<dg::Vector, size=12> Stack of the four endeffector positions
         """
+        if self.com_end_eff_pos:
+            return self.com_end_eff_pos
+
         com_signal = self.leg_imp_ctrl[0].robot_dg.com
 
-        self.abs_end_eff_pos = stack_two_vectors(
+        self.com_end_eff_pos = stack_two_vectors(
             stack_two_vectors(
                 subtract_vec_vec(self.leg_imp_ctrl[0].xyzpos_foot, com_signal),
                 subtract_vec_vec(self.leg_imp_ctrl[1].xyzpos_foot, com_signal),
@@ -349,7 +358,32 @@ class Solo12ImpedanceController(object):
                 subtract_vec_vec(self.leg_imp_ctrl[2].xyzpos_foot, com_signal),
                 subtract_vec_vec(self.leg_imp_ctrl[3].xyzpos_foot, com_signal),
                 3, 3),
-            6, 6
+            6, 6, "imp_ctrl_com_end_eff_pos"
+        )
+
+        return self.com_end_eff_pos
+
+    def compute_abs_end_eff_pos(self):
+        """Returns the endeffector positions wrt world frame.
+
+        Returns:
+          Signal<dg::Vector, size=12> Stack of the four endeffector positions
+        """
+        if self.abs_end_eff_pos:
+            return self.abs_end_eff_pos
+
+        com_signal = self.leg_imp_ctrl[0].robot_dg.com
+
+        self.abs_end_eff_pos = stack_two_vectors(
+            stack_two_vectors(
+                self.leg_imp_ctrl[0].xyzpos_foot,
+                self.leg_imp_ctrl[1].xyzpos_foot,
+                3, 3),
+            stack_two_vectors(
+                self.leg_imp_ctrl[2].xyzpos_foot,
+                self.leg_imp_ctrl[3].xyzpos_foot,
+                3, 3),
+            6, 6, "imp_ctrl_abs_end_eff_pos"
         )
 
         return self.abs_end_eff_pos
@@ -357,3 +391,10 @@ class Solo12ImpedanceController(object):
     def record_data(self):
         for imp_controller in self.leg_imp_ctrl:
             imp_controller.record_data(self.robot)
+
+        self.compute_abs_end_eff_pos()
+
+        self.robot.add_trace("imp_ctrl_des_pos", "sout")
+        self.robot.add_trace("imp_ctrl_des_vel", "sout")
+        self.robot.add_trace("imp_ctrl_fff", "sout")
+        self.robot.add_trace("imp_ctrl_abs_end_eff_pos", "sout")
