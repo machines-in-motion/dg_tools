@@ -158,31 +158,44 @@ class QuadrupedLegImpedanceController():
 
 
 class QuadrupedComControl(object):
-    def __init__(self, robot, ViconClientEntity, client_name = "vicon_client" , vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl"):
-
+    def __init__(self, robot, ViconClientEntity=None, client_name = "vicon_client",
+                 vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl",
+                 base_position=None, base_velocity=None):
+        """
+        Args:
+          base_position: (Optional, Vec7d signal) Base position of the robot.
+          base_velocity: (Optional, Vec6d signal) Base velocity of the robot.
+        """
         self.robot = robot
 
         self.EntityName = EntityName
+        self.init_robot_properties()
         self.client_name = client_name
         self.host_name_quadruped = vicon_ip
-        self.init_robot_properties()
 
-        self.vicon_client = ViconClientEntity('vicon_' + self.client_name)
-        self.vicon_client.connect_to_vicon(self.host_name_quadruped)
-        self.vicon_client.displaySignals()
+        if ViconClientEntity:
+            self.vicon_client = ViconClientEntity('vicon_' + self.client_name)
+            self.vicon_client.connect_to_vicon(self.host_name_quadruped)
+            self.vicon_client.displaySignals()
 
-        self.vicon_client.add_object_to_track("{}/{}".format(self.robot_vicon_name, self.robot_vicon_name))
+            self.vicon_client.add_object_to_track("{}/{}".format(self.robot_vicon_name, self.robot_vicon_name))
 
-        try:
-            ## comment out if running on real robot
-            self.vicon_client.robot_wrapper(robot, self.robot_vicon_name)
-        except:
-            print("not in simulation")
+            try:
+                ## comment out if running on real robot
+                self.vicon_client.robot_wrapper(robot, self.robot_vicon_name)
+            except:
+                print("not in simulation")
 
-
-        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
-        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
-        self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
+            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
+            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
+            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
+            self.vicon_base_position = self.vicon_client.signal(self.robot_vicon_name + "_position")
+            self.vicon_base_velocity = self.vicon_client.signal(self.robot_vicon_name + "_velocity_body")
+        elif base_position and base_velocity:
+            self.vicon_base_position = base_position
+            self.vicon_base_velocity = base_velocity
+        else:
+            raise ValueError('Need to provide either ViconClientEntity or (base_positon and base_velocity)')
 
         self.com_imp_ctrl = ComImpedanceControl(EntityName)
 
@@ -198,10 +211,8 @@ class QuadrupedComControl(object):
 
     def compute_torques(self, Kp, des_pos, Kd, des_vel, des_fff):
         self.base_pos_xyz =  add_vec_vec(
-            selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_position"),
-                         0, 3, "base_pos"), self.vicon_offset)
-        self.base_vel_xyz = selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_velocity_body"),
-                                        0, 3, "base_vel")
+            selec_vector(self.vicon_base_position, 0, 3, "base_pos"), self.vicon_offset)
+        self.base_vel_xyz = selec_vector(self.vicon_base_velocity, 0, 3, "base_vel")
 
         plug(self.base_pos_xyz, self.com_imp_ctrl.position)
         plug(self.base_vel_xyz, self.com_imp_ctrl.velocity)
@@ -242,15 +253,11 @@ class QuadrupedComControl(object):
         return self.torques
 
     def compute_ang_control_torques(self, Kp_ang, des_ori, Kd_ang, des_ang_vel, des_fft):
-
         """
         ### Computes torques required to control the orientation of base
         """
-
-        self.base_orientation = selec_vector(self.vicon_client.signal(self.robot_vicon_name
-                                             + "_position"), 3,7, "base_orientation")
-        self.base_ang_vel_xyz =  selec_vector(self.vicon_client.signal(self.robot_vicon_name
-                                        + "_velocity_body"),3, 6, "selec_ang_dxyz")
+        self.base_orientation = selec_vector(self.vicon_base_position, 3, 7, "base_orientation")
+        self.base_ang_vel_xyz = selec_vector(self.vicon_base_velocity, 3, 6, "selec_ang_dxyz")
 
         plug(Kp_ang, self.com_imp_ctrl.Kp_ang)
         plug(Kd_ang, self.com_imp_ctrl.Kd_ang)
