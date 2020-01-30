@@ -68,6 +68,7 @@ class ButterWorthFilter(object):
         self.percentage_nyquist_cutoff = percentage_nyquist_cutoff
         self.filter_order = filter_order
         self._compute_numerator_denominator()
+        self.filter.switch_filter(self.numerator, self.denominator)
 
     def _compute_numerator_denominator(self):
         self.numerator, self.denominator = butter(
