@@ -28,7 +28,7 @@ class ButterWorthFilter(object):
     """
 
     def __init__(self, name=""):
-        """ Constructor 
+        """ Constructor
 
         Args:
             name:
@@ -46,25 +46,29 @@ class ButterWorthFilter(object):
         Args:
             size_of_input:
             control_time_step:
-            percentage_nyquist_cutoff:
+            percentage_nyquist_cutoff: Range of (0., 1.)
             filter_order:
             prefix:
 
         """
-        # copying the arguments internally
+        # Copying the arguments internally.
         self.size_of_input = size_of_input
         self.control_time_step = control_time_step
         self.percentage_nyquist_cutoff = percentage_nyquist_cutoff
         self.filter_order = filter_order
-        # filter paramters
+
+        # Filter paramters.
         self.numerator = []
         self.denominator = []
         self._compute_numerator_denominator()
-        # initialize the entity
+
+        # Initialize the entity.
         self.filter.init(control_time_step, size_of_input,
                          self.numerator, self.denominator)
 
-    def update(self, percentage_nyquist_cutoff, filter_order):
+    def update(self, percentage_nyquist_cutoff, filter_order=None):
+        if filter_order is None:
+            filter_order = self.filter_order
         self.percentage_nyquist_cutoff = percentage_nyquist_cutoff
         self.filter_order = filter_order
         self._compute_numerator_denominator()
