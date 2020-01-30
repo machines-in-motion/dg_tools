@@ -30,6 +30,8 @@ if __name__ == "__main__":
 
     my_filter.init(1, 1.0/fs, low, order)
 
+    my_filter.update(low, order)
+
     # Filter a noisy signal.
     T = 0.05
     nsamples = T * fs

@@ -64,7 +64,7 @@ class ButterWorthFilter(object):
         self.filter.init(control_time_step, size_of_input,
                          self.numerator, self.denominator)
 
-    def update(self, filter_order, percentage_nyquist_cutoff):
+    def update(self, percentage_nyquist_cutoff, filter_order):
         self.percentage_nyquist_cutoff = percentage_nyquist_cutoff
         self.filter_order = filter_order
         self._compute_numerator_denominator()
