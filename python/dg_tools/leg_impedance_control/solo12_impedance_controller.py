@@ -33,6 +33,7 @@ class Solo12ComController(QuadrupedComControl):
 
         # TODO: Provide the new base inertia here.
         self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
+        self.robot_pin = None
 
     def track_com(self):
         """Instead of tracking the biased base position and velocity, track the
@@ -40,7 +41,7 @@ class Solo12ComController(QuadrupedComControl):
         """
         # Init a dg pinocchio robot here for com and vcom computation.
         self.robot_pin = Solo12Config.buildRobotWrapper()
-        self.robot_dg = dp.DynamicPinocchio('')
+        self.robot_dg = dp.DynamicPinocchio(self.EntityName + '_pinocchio')
         self.robot_dg.setModel(self.robot_pin.model)
         self.robot_dg.setData(self.robot_pin.data)
 
@@ -56,13 +57,19 @@ class Solo12ComController(QuadrupedComControl):
         self.robot_dg.acceleration.value = 18 * [0.,]
 
         # These are used in the reactive_stepper.
-        self.robot_com = self.robot_dg.com
+        self.robot_com = vectorIdentity(self.robot_dg.com, 3, self.EntityName + '_pin_com')
         self.robot_vcom = multiply_mat_vec(
-            self.robot_dg.Jcom, self.robot_velocity)
+            self.robot_dg.Jcom, self.robot_velocity, self.EntityName + '_pin_vcom')
 
         dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
         dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
 
+    def record_data(self):
+        super(Solo12ComController, self).record_data()
+
+        if self.robot_pin:
+            self.robot.add_trace(self.EntityName + '_pin_com', 'sout')
+            self.robot.add_trace(self.EntityName + '_pin_vcom', 'sout')
 
     def return_com_torques(self, *args, **kwargs):
         """
@@ -250,6 +257,7 @@ class Solo12ImpedanceController(object):
                 Solo12LegImpedanceController(leg_name, leg_idx))
 
         self.abs_end_eff_pos = None
+        self.abs_end_eff_vel = None
         self.com_end_eff_pos = None
 
     def _compute_leg_control_torques(self, leg_idx, kp, kd, kf, des_pos, des_vel, fff):
@@ -372,8 +380,6 @@ class Solo12ImpedanceController(object):
         if self.abs_end_eff_pos:
             return self.abs_end_eff_pos
 
-        com_signal = self.leg_imp_ctrl[0].robot_dg.com
-
         self.abs_end_eff_pos = stack_two_vectors(
             stack_two_vectors(
                 self.leg_imp_ctrl[0].xyzpos_foot,
@@ -388,13 +394,34 @@ class Solo12ImpedanceController(object):
 
         return self.abs_end_eff_pos
 
+    def compute_abs_end_eff_vel(self):
+        """Returns the endeffector velocity signal."""
+        if self.abs_end_eff_vel:
+            return self.abs_end_eff_vel
+
+        self.abs_end_eff_vel = stack_two_vectors(
+            stack_two_vectors(
+                self.leg_imp_ctrl[0].rel_vel_foot,
+                self.leg_imp_ctrl[1].rel_vel_foot,
+                3, 3),
+            stack_two_vectors(
+                self.leg_imp_ctrl[2].rel_vel_foot,
+                self.leg_imp_ctrl[3].rel_vel_foot,
+                3, 3),
+            6, 6, "imp_ctrl_abs_end_eff_vel"
+        )
+
+        return self.abs_end_eff_pos
+
     def record_data(self):
         for imp_controller in self.leg_imp_ctrl:
             imp_controller.record_data(self.robot)
 
         self.compute_abs_end_eff_pos()
+        self.compute_abs_end_eff_vel()
 
         self.robot.add_trace("imp_ctrl_des_pos", "sout")
         self.robot.add_trace("imp_ctrl_des_vel", "sout")
         self.robot.add_trace("imp_ctrl_fff", "sout")
         self.robot.add_trace("imp_ctrl_abs_end_eff_pos", "sout")
+        self.robot.add_trace("imp_ctrl_abs_end_eff_vel", "sout")

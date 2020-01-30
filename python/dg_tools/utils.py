@@ -85,7 +85,7 @@ def vectorIdentity(vec1, vec_size, entityName):
     add = Add_of_vector(entityName)
     plug(vec1, add.signal('sin1'))
     plug(constVector(vec_size * [0.,]), add.signal('sin2'))
-    return add.sout
+    return VectorSignal(add.sout, vec_size)
 
 
 def constMatrix(val, entityName):
@@ -121,6 +121,12 @@ class BaseOperatorSignal(SignalBase):
                 return v['return_wrap'](self, op, other)
 
         raise ValueError('Unsupported "%s" operation with "%s"' % (op_name, str(other)))
+
+    def _identity(self, entity_name):
+        raise Exception('Identity operator not defined for this OperatorSignal type');
+
+    def name_entity(self, entity_name):
+        return self._identity(entity_name)
 
     def __add__(self, other):
         return self._op(other, '__add__', self._add)
@@ -186,6 +192,9 @@ class VectorSignal(BaseOperatorSignal):
         self._sub = {
             VectorSignal: opdef(Substract_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length))
         }
+
+    def _identity(self, entity_name):
+        return vectorIdentity(self, self.length, entity_name)
 
     def __getitem__(self, val):
         if isinstance(val, slice):

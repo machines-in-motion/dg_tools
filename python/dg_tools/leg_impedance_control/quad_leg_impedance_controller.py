@@ -282,7 +282,7 @@ class QuadrupedComControl(object):
         """
         if self._biased_base_position is None:
             self._biased_base_position = stack_two_vectors(self.biased_base_pos_xyz,
-                    self.base_orientation, 3, 4)
+                    self.base_orientation, 3, 4, self.EntityName + '_biased_base_pos')
         return self._biased_base_position
 
     def get_biased_base_velocity(self):
@@ -294,7 +294,7 @@ class QuadrupedComControl(object):
         """
         if self._biased_base_velocity is None:
             self._biased_base_velocity = stack_two_vectors(self.biased_base_vel_xyz,
-                    self.base_ang_vel_xyz, 3, 3)
+                    self.base_ang_vel_xyz, 3, 3, self.EntityName + '_biased_base_vel')
         return self._biased_base_velocity
 
     def set_abs_end_eff_pos(self, abs_end_eff_pos_sig):
@@ -521,6 +521,12 @@ class QuadrupedComControl(object):
         return wbc_torques
 
     def record_data(self):
+        self.get_biased_base_position()
+        self.get_biased_base_velocity()
+
+        self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
+        self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
+
         # self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
         # #
