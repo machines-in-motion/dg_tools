@@ -527,10 +527,10 @@ class QuadrupedComControl(object):
         self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
         self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
 
-        # self.robot.add_trace(self.EntityName, "tau")
+        self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
         # #
-        # self.robot.add_trace(self.EntityName, "angtau")
+        self.robot.add_trace(self.EntityName, "angtau")
         # self.robot.add_ros_and_trace(self.EntityName, "angtau")
         # #
         #
