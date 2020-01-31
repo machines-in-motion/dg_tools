@@ -334,7 +334,7 @@ class Solo12ImpedanceController(object):
                 pos_global=pos_global)
 
         # Combine the computed torques from the impedance controllers into single torque vector.
-        self.control_torques = stack_two_vectors(
+        self.control_torques = VectorSignal(stack_two_vectors(
             stack_two_vectors(
                 self.leg_imp_ctrl[0].control_torques,
                 self.leg_imp_ctrl[1].control_torques, 3, 3),
@@ -342,7 +342,7 @@ class Solo12ImpedanceController(object):
                 self.leg_imp_ctrl[2].control_torques,
                 self.leg_imp_ctrl[3].control_torques, 3, 3),
             6, 6
-        )
+        ), 12)
 
         return self.control_torques
 
