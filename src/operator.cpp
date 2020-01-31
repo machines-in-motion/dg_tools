@@ -39,12 +39,16 @@ PoseQuaternionToPoseRPY::PoseQuaternionToPoseRPY( const std::string & name )
 dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time)
 {
     const dg::Vector& input = data_inputSIN(time);
-    dynamicgraph::sot::VectorQuaternion quat;
-    quat.coeffs() = input.tail<4>();
+    dynamicgraph::sot::VectorQuaternion quat(input(6), input(3), input(4), input(5));
+
+    std::cout << "Input:" << input << std::endl;
+
+    std::cout << "quatcof:" << quat.coeffs() << std::endl;
+    std::cout << "rotmat:" << quat.toRotationMatrix() << std::endl;
 
     out.resize(6);
     out.head<3>() = input.head<3>();
-    out.tail<3>() = quat.toRotationMatrix().eulerAngles(0, 1, 2);
+    out.tail<3>() = quat.toRotationMatrix().eulerAngles(2, 1, 0).reverse();
     return out;
 }
 
