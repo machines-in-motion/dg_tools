@@ -223,6 +223,7 @@ class QuadrupedComControl(object):
         plug(des_pos, self.com_imp_ctrl.des_pos)
         plug(des_vel, self.com_imp_ctrl.des_vel)
         plug(des_fff, self.com_imp_ctrl.des_fff)
+
         ### mass in all direction (double to vec returns zero)
         ## TODO : Check if there is dynamicgraph::double
         self.com_imp_ctrl.mass.value = self.robot_mass
@@ -523,6 +524,9 @@ class QuadrupedComControl(object):
     def record_data(self):
         self.get_biased_base_position()
         self.get_biased_base_velocity()
+
+        self.robot.add_trace(self.com_imp_ctrl.name, "des_pos")
+        self.robot.add_trace(self.com_imp_ctrl.name, "des_vel")
 
         self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
         self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
