@@ -53,7 +53,7 @@ if __name__ == "__main__":
         print (my_filter.sin.value, " ",)
         my_filter.sout.recompute(i)
         y += my_filter.sout.value
-    
+
     print (x)
     print (y)
 
