@@ -21,7 +21,7 @@ from numbers import Number
 from dynamic_graph_manager.dg_tools import (
     PoseQuaternionToPoseRPY,
     Division_of_double,
-    Sin as SinEntity
+    Sinus as Sinus
 )
 
 from dynamic_graph import plug
@@ -326,8 +326,8 @@ def component_of_vector(vector, index, entityName):
     return comp_of_vect.sout
 
 
-def sin_doub(db1, entityName=''):
-    op = SinEntity(entityName)
+def sinus_double(db1, entityName=''):
+    op = Sinus(entityName)
     plug(db1, op.sin)
     return op.sout
 
