@@ -186,9 +186,9 @@ class QuadrupedComControl(object):
             except:
                 print("not in simulation")
 
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
             self.vicon_base_position = self.vicon_client.signal(self.robot_vicon_name + "_position")
             self.vicon_base_velocity = self.vicon_client.signal(self.robot_vicon_name + "_velocity_body")
         elif base_position and base_velocity:
@@ -197,6 +197,8 @@ class QuadrupedComControl(object):
         else:
             raise ValueError('Need to provide either ViconClientEntity or (base_positon and base_velocity)')
 
+        self.vicon_base_position_raw = vectorIdentity(self.vicon_base_position, 7, "QuadrupedComControl_vicon_position")
+        self.vicon_base_velocity_raw = vectorIdentity(self.vicon_base_velocity, 6, "QuadrupedComControl_vicon_velocity")
         self.com_imp_ctrl = ComImpedanceControl(EntityName)
 
         self._biased_base_position = None
@@ -527,6 +529,9 @@ class QuadrupedComControl(object):
 
         self.robot.add_trace(self.com_imp_ctrl.name, "des_pos")
         self.robot.add_trace(self.com_imp_ctrl.name, "des_vel")
+
+        self.robot.add_trace('QuadrupedComControl_vicon_position', 'sout')
+        self.robot.add_trace('QuadrupedComControl_vicon_velocity', 'sout')
 
         self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
         self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')

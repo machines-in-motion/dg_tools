@@ -416,8 +416,12 @@ dynamicgraph::Vector& ComImpedanceControl::
 
         /******* setting up the QP *************************/
 
-        ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
-        ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+        ce0[0] = lctrl[0];
+        ce0[1] = lctrl[1];
+        ce0[2] = lctrl[2];
+        ce0[3] = actrl[0];
+        ce0[4] = actrl[1];
+        ce0[5] = actrl[2];
 
         // updating ce_new based on the desired absolute end effector velocity
         if (absendeffposSIN.isPlugged()) {
@@ -425,7 +429,7 @@ dynamicgraph::Vector& ComImpedanceControl::
           for (int i = 0; i < 4; i++) {
             double x = abs_end_eff_pos(3 * i);
             double y = abs_end_eff_pos(3 * i + 1);
-            double z = 0; // Always assumed to be on the floor.
+            double z = abs_end_eff_pos(3 * i + 2); // 0; // Always assumed to be on the floor.
             ce_new.block<3, 3>(3, 3 * i) << 0, -z,  y,
                                             z,  0, -x,
                                            -y,  x,  0;

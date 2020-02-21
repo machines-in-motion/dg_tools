@@ -241,6 +241,9 @@ class Solo12LegImpedanceController(object):
             robot.add_trace("total_error_" + self.leg_name, "sout")
             # robot.add_ros_and_trace("total_error_" + self.leg_name, "sout")
 
+        robot.add_trace("xyzpos_foot_" + self.leg_name, "sout")
+
+
 class Solo12ImpedanceController(object):
     """ Implements leg impedance controller for the solo12 robot.
 
@@ -263,7 +266,7 @@ class Solo12ImpedanceController(object):
     def _compute_leg_control_torques(self, leg_idx, kp, kd, kf, des_pos, des_vel, fff):
         """
         """
-        self.leg_imp_contrl
+        self.leg_imp_ctrl
 
     def _slice_vec(self, vec, leg_idx, name):
         """ Helper for slicing the desired vector for a leg.
