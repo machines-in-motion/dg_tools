@@ -186,9 +186,9 @@ class QuadrupedComControl(object):
             except:
                 print("not in simulation")
 
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
-            self.robot.add_ros_and_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
             self.vicon_base_position = self.vicon_client.signal(self.robot_vicon_name + "_position")
             self.vicon_base_velocity = self.vicon_client.signal(self.robot_vicon_name + "_velocity_body")
         elif base_position and base_velocity:
