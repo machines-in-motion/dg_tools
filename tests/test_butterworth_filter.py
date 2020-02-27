@@ -17,9 +17,13 @@ class TestButterWorthFilter(unittest.TestCase):
         fs = 5000.0
         lowcut = 600.0
         nyq = 0.5 * fs
-        low = lowcut / nyq
+        sampling_time = 1./fs
+        nyq_cutoff_perc = 0.24 # Keep 24% of the nyq frequency of the data
 
-        my_filter.init(1, 1.0/fs, low, order)
+        my_filter.init(1, sampling_time, 0.1, 3)
+
+        # Change the filter frequency to the desired value.
+        my_filter.update(nyq_cutoff_perc, order)
 
         # Filter a noisy signal.
         T = 0.05
@@ -40,7 +44,6 @@ class TestButterWorthFilter(unittest.TestCase):
 
         y = np.array(y)
         y_result = TestButterWorthFilter.y_result()
-        
         self.assertTrue(np.allclose(y, y_result))
 
     @staticmethod

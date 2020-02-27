@@ -55,6 +55,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,regSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::reg")
   ,leglengthflSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_fl")
   ,leglengthhlSIN(NULL, "ComImpedanceControl("+name+")::input(Matrix)::leg_length_hl")
+  ,absendeffposSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::abs_end_eff_pos")
   ,absendeffvelSIN(NULL, "ComImpedanceControl("+name+")::input(vector)::abs_end_eff_vel")
 
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
@@ -98,7 +99,7 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     KdAngSIN << KpAngSIN << inertiaSIN << biasedpositionSIN << biasedvelocitySIN << desiredpositionSIN << massSIN << cntsensorSIN
     << ThrCntSensorSOUT  << desiredvelocitySIN << feedforwardforceSIN <<  controlSOUT <<
     oriSIN << desoriSIN << angvelSIN << desiredangvelSIN << endefflqrcontrolSOUT
-    << feedforwardtorquesSIN << thrcntvalueSIN << absendeffvelSIN
+    << feedforwardtorquesSIN << thrcntvalueSIN << absendeffposSIN << absendeffvelSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
     << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN <<
     wbcontrolSOUT << leglengthflSIN << leglengthhlSIN << descomposSOUT
@@ -362,9 +363,6 @@ dynamicgraph::Vector& ComImpedanceControl::
 
         tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
                       + vel_error.array()*Kd.array());
-
-
-        tau[1] = 0.0;
       }
 
     }
@@ -416,13 +414,23 @@ dynamicgraph::Vector& ComImpedanceControl::
         hess_new = hess;
         ce_new = ce;
 
-
         /******* setting up the QP *************************/
 
         ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
         ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
 
         // updating ce_new based on the desired absolute end effector velocity
+        if (absendeffposSIN.isPlugged()) {
+          const dynamicgraph::Vector& abs_end_eff_pos = absendeffposSIN(t);
+          for (int i = 0; i < 4; i++) {
+            double x = abs_end_eff_pos(3 * i);
+            double y = abs_end_eff_pos(3 * i + 1);
+            double z = 0; // Always assumed to be on the floor.
+            ce_new.block<3, 3>(3, 3 * i) << 0, -z,  y,
+                                            z,  0, -x,
+                                           -y,  x,  0;
+          }
+        }
 
         for (int i=0; i < 12; i ++){
             ce_new(i+6,i) = abs_end_eff_vel(i);
@@ -568,13 +576,9 @@ dynamicgraph::Vector& ComImpedanceControl::
       }
     }
     else{
+      isbiasset = 1;
       for(int i = 0 ; i < 3; i ++){
-        if(t < bias_time + t_start){
-            position_bias[i] += position[i]/bias_time;
-          }
-        else {
-          isbiasset = 1;
-        }
+        position_bias[i] = position[i];
         pos_bias[i] = position_bias[i];
       }
     }
@@ -612,13 +616,9 @@ dynamicgraph::Vector& ComImpedanceControl::
       }
     }
     else{
+      isbiasset = 1;
       for(int i = 0 ; i < 3; i ++){
-        if(t < bias_time + t_start){
-            velocity_bias[i] += velocity[i]/bias_time;
-          }
-        else {
-          isbiasset = 1;
-        }
+        velocity_bias[i] += velocity[i];
         vel_bias[i] = velocity_bias[i];
       }
     }

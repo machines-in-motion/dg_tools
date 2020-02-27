@@ -15,6 +15,8 @@ set(cpp_source_files
   data/upsampler.cpp
   data/previous_value.cpp
   data/memory_replay.cpp
+  data/memory_replay.cpp
+  operator.cpp
 )
 
 add_library(${lib_name} SHARED ${cpp_source_files})

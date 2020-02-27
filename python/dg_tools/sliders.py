@@ -19,13 +19,17 @@ from dynamic_graph.sot.core.math_small_entities import (
     Add_of_vector
 )
 
+from dg_tools.filter import ButterWorthFilter
+
+from dg_tools.utils import VectorSignal, DoubleSignal
 
 class Sliders(object):
     """
     This class filter the sliders signals from the hardware.
     """
 
-    def __init__(self, nb_sliders, prefix="", filter_size=400):
+    def __init__(self, nb_sliders, prefix="", filter_size=400, control_time_step=0.001,
+                 percentage_nyquist_cutoff=0.1, filter_order=6):
         """
         Initialize the class by creating all the output signals
         """
@@ -35,17 +39,9 @@ class Sliders(object):
         self.nb_sliders = nb_sliders
         self.prefix = prefix
 
-        # First of all we filter the sliders data
-        self.filter_size = filter_size
-        self.sliders_filtered = FIRFilter_Vector_double(self.prefix +
-                                                        "sliders_fir_filter")
-        self.sliders_filtered.setSize(self.filter_size)
-        for i in range(self.filter_size):
-            self.sliders_filtered.setElement(i, 1.0/float(self.filter_size))
-        self.sliders_filtered.sin.value = nb_sliders * [0.0]
-
-        # we declare the input signal of this class beeing the input of the
-        # filter
+        self.sliders_filtered = ButterWorthFilter(self.prefix + "_sliders_butter")
+        self.sliders_filtered.init(nb_sliders, control_time_step,
+            percentage_nyquist_cutoff, filter_order)
         self.sin = self.sliders_filtered.sin
 
         #
@@ -99,6 +95,9 @@ class Sliders(object):
             self.__dict__[slider_name] = Slider()
             self.__dict__[slider_name].double = self.__dict__[slider_component]
             self.__dict__[slider_name].vector = self.__dict__[slider_scale]
+            self.__dict__[slider_letter] = DoubleSignal(self.__dict__[slider_component].sout)
+            self.__dict__[slider_letter + "_vec"] = VectorSignal(self.__dict__[slider_scale].sout, 1)
+
 
     def set_scale_values(self, scale_values):
         assert len(scale_values) == self.nb_sliders
@@ -127,13 +126,8 @@ class Sliders(object):
     def plug_slider_signal(self, slider_positions_sig):
         plug(slider_positions_sig, self.sin)
 
-        # Fillup the `self.sliders_filtered` with the initial value to
-        # avoid jumping at the beginning.
-        for i in range(self.filter_size):
-            self.sliders_filtered.sout.recompute(i)
-
     def trace(self, robot):
-        robot.add_trace(self.prefix + "sliders_fir_filter", "sout")
+        robot.add_trace(self.sliders_filtered.name, "x_filtered")
         for i, slider_letter in enumerate(
                 list(string.ascii_uppercase[:self.nb_sliders])):
             # names

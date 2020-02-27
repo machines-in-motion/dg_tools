@@ -157,43 +157,62 @@ class QuadrupedLegImpedanceController():
         self.imp_ctrl_leg_hr.record_data(self.robot)
 
 
-class QuadrupedComControl():
-    def __init__(self, robot, ViconClientEntity, client_name = "vicon_client" , vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl"):
-
+class QuadrupedComControl(object):
+    def __init__(self, robot, ViconClientEntity=None, client_name = "vicon_client",
+                 vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl",
+                 base_position=None, base_velocity=None):
+        """
+        Args:
+          base_position: (Optional, Vec7d signal) Base position of the robot.
+          base_velocity: (Optional, Vec6d signal) Base velocity of the robot.
+        """
         self.robot = robot
 
         self.EntityName = EntityName
+        self.init_robot_properties()
         self.client_name = client_name
         self.host_name_quadruped = vicon_ip
-        self.robot_vicon_name = "quadruped"
 
-        self.vicon_client = ViconClientEntity(self.client_name)
-        self.vicon_client.connect_to_vicon(self.host_name_quadruped)
-        self.vicon_client.displaySignals()
+        if ViconClientEntity:
+            self.vicon_client = ViconClientEntity('vicon_' + self.client_name)
+            self.vicon_client.connect_to_vicon(self.host_name_quadruped)
+            self.vicon_client.displaySignals()
 
-        self.vicon_client.add_object_to_track("{}/{}".format(self.robot_vicon_name, self.robot_vicon_name))
+            self.vicon_client.add_object_to_track("{}/{}".format(self.robot_vicon_name, self.robot_vicon_name))
 
-        try:
-            ## comment out if running on real robot
-            self.vicon_client.robot_wrapper(robot)
-        except:
-            print("not in simulation")
+            try:
+                ## comment out if running on real robot
+                self.vicon_client.robot_wrapper(robot, self.robot_vicon_name)
+            except:
+                print("not in simulation")
 
-
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_position")
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_velocity_body")
-        self.robot.add_ros_and_trace(self.client_name, self.robot_vicon_name + "_velocity_world")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_position")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_body")
+            self.robot.add_trace(self.vicon_client.name, self.robot_vicon_name + "_velocity_world")
+            self.vicon_base_position = self.vicon_client.signal(self.robot_vicon_name + "_position")
+            self.vicon_base_velocity = self.vicon_client.signal(self.robot_vicon_name + "_velocity_body")
+        elif base_position and base_velocity:
+            self.vicon_base_position = base_position
+            self.vicon_base_velocity = base_velocity
+        else:
+            raise ValueError('Need to provide either ViconClientEntity or (base_positon and base_velocity)')
 
         self.com_imp_ctrl = ComImpedanceControl(EntityName)
 
+        self._biased_base_position = None
+        self._biased_base_velocity = None
+
+        self.vicon_offset = constVector([0., 0., 0.,])
+
+    def init_robot_properties(self):
+        self.robot_vicon_name = "quadruped"
+        self.robot_mass = [2.17784, 2.17784, 2.17784]
+        self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
+
     def compute_torques(self, Kp, des_pos, Kd, des_vel, des_fff):
-
-
-        self.base_pos_xyz = selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_position"),
-                                        0, 3, "base_pos")
-        self.base_vel_xyz = selec_vector(self.vicon_client.signal(self.robot_vicon_name + "_velocity_body"),
-                                        0, 3, "base_vel")
-
+        self.base_pos_xyz =  add_vec_vec(
+            selec_vector(self.vicon_base_position, 0, 3, "base_pos"), self.vicon_offset)
+        self.base_vel_xyz = selec_vector(self.vicon_base_velocity, 0, 3, "base_vel")
 
         plug(self.base_pos_xyz, self.com_imp_ctrl.position)
         plug(self.base_vel_xyz, self.com_imp_ctrl.velocity)
@@ -204,9 +223,10 @@ class QuadrupedComControl():
         plug(des_pos, self.com_imp_ctrl.des_pos)
         plug(des_vel, self.com_imp_ctrl.des_vel)
         plug(des_fff, self.com_imp_ctrl.des_fff)
+
         ### mass in all direction (double to vec returns zero)
         ## TODO : Check if there is dynamicgraph::double
-        self.com_imp_ctrl.mass.value = [2.17784, 2.17784, 2.17784]
+        self.com_imp_ctrl.mass.value = self.robot_mass
 
         self.control_switch_pos = SwitchVector("control_switch_pos")
         self.control_switch_pos.setSignalNumber(2) # we want to switch between 2 signals
@@ -234,15 +254,11 @@ class QuadrupedComControl():
         return self.torques
 
     def compute_ang_control_torques(self, Kp_ang, des_ori, Kd_ang, des_ang_vel, des_fft):
-
         """
         ### Computes torques required to control the orientation of base
         """
-
-        self.base_orientation = selec_vector(self.vicon_client.signal(self.robot_vicon_name
-                                             + "_position"), 3,7, "base_orientation")
-        self.base_ang_vel_xyz =  selec_vector(self.vicon_client.signal(self.robot_vicon_name
-                                        + "_velocity_body"),3, 6, "selec_ang_dxyz")
+        self.base_orientation = selec_vector(self.vicon_base_position, 3, 7, "base_orientation")
+        self.base_ang_vel_xyz = selec_vector(self.vicon_base_velocity, 3, 6, "selec_ang_dxyz")
 
         plug(Kp_ang, self.com_imp_ctrl.Kp_ang)
         plug(Kd_ang, self.com_imp_ctrl.Kd_ang)
@@ -255,9 +271,35 @@ class QuadrupedComControl():
 
         return self.com_imp_ctrl.angtau
 
-
     def set_bias(self):
         self.control_switch_pos.selection.value = 1
+
+    def get_biased_base_position(self):
+        """
+        Return the robot position taking the bias offset into account.
+
+        Returns:
+            Signal<dg::vector> of size 7 (0:3 translation, 3:7 quaternion orientation)
+        """
+        if self._biased_base_position is None:
+            self._biased_base_position = stack_two_vectors(self.biased_base_pos_xyz,
+                    self.base_orientation, 3, 4, self.EntityName + '_biased_base_pos')
+        return self._biased_base_position
+
+    def get_biased_base_velocity(self):
+        """
+        Return the robot velocity taking the bias offset into account.
+
+        Returns:
+            Signal<dg::vector> of size 6 (0:3 translation, 3:6 rpy orientation)
+        """
+        if self._biased_base_velocity is None:
+            self._biased_base_velocity = stack_two_vectors(self.biased_base_vel_xyz,
+                    self.base_ang_vel_xyz, 3, 3, self.EntityName + '_biased_base_vel')
+        return self._biased_base_velocity
+
+    def set_abs_end_eff_pos(self, abs_end_eff_pos_sig):
+        plug(abs_end_eff_pos_sig, self.com_imp_ctrl.abs_end_eff_pos)
 
     def threshold_cnt_sensor(self):
         plug(self.robot.device.contact_sensors, self.com_imp_ctrl.cnt_sensor)
@@ -480,17 +522,26 @@ class QuadrupedComControl():
         return wbc_torques
 
     def record_data(self):
-        # self.robot.add_trace(self.EntityName, "tau")
+        self.get_biased_base_position()
+        self.get_biased_base_velocity()
+
+        self.robot.add_trace(self.com_imp_ctrl.name, "des_pos")
+        self.robot.add_trace(self.com_imp_ctrl.name, "des_vel")
+
+        self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
+        self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
+
+        self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
         # #
-        # self.robot.add_trace(self.EntityName, "angtau")
+        self.robot.add_trace(self.EntityName, "angtau")
         # self.robot.add_ros_and_trace(self.EntityName, "angtau")
         # #
         #
         self.robot.add_trace(self.EntityName, "wbctrl")
         # self.robot.add_ros_and_trace(self.EntityName, "wbctrl")
 
-        self.robot.add_trace(self.EntityName, "lqrtau")
+        # self.robot.add_trace(self.EntityName, "lqrtau")
         # self.robot.add_ros_and_trace(self.EntityName, "lqrtau")
 
         # self.robot.add_trace(self.EntityName, "thr_cnt_sensor")
@@ -509,7 +560,7 @@ class QuadrupedComControl():
         # self.robot.add_ros_and_trace("biased_pos", "sout")
 
         #
-        # self.robot.add_trace("biased_vel", "sout")
+        self.robot.add_trace("biased_vel", "sout")
         # self.robot.add_ros_and_trace("biased_vel", "sout")
         # #
         # self.robot.add_trace("quad_com_ctrl", "lqrtau")
