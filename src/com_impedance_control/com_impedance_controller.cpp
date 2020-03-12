@@ -210,6 +210,8 @@ dynamicgraph::Vector& ComImpedanceControl::
         const dynamicgraph::Vector& omega = angvelSIN(t);
         const dynamicgraph::Vector& des_omega = desiredangvelSIN(t);
         const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
+        std::cout << "LhumLqr ori " << ori.array();
+        std::cout << "LhumLqr desori " << des_ori.array();
 
         if (isbiasset){
           /*----- assertions of sizes -------------*/
@@ -237,7 +239,9 @@ dynamicgraph::Vector& ComImpedanceControl::
           ori_se3 = ori_quat.toRotationMatrix();
 
           ori_error_se3 = des_ori_se3.transpose() * ori_se3;
+          std::cout << "LhumOri e " << ori_error_se3 << std::endl;
           ori_error_quat = ori_error_se3;
+          std::cout << "LhumOri q " << ori_error_quat.vec() << "  " << ori_error_quat.w() << std::endl;
 
           //todo: multiply as matrix
 
@@ -247,9 +251,18 @@ dynamicgraph::Vector& ComImpedanceControl::
           ori_error[2] = -2.0*((ori_error_quat.w()*ori_error_quat.vec()[2] * Kp_ang[2]) + (Kp_ang[1] - Kp_ang[0])*(ori_error_quat.vec()[1]*ori_error_quat.vec()[0]));
 
           /*---------- computing ang error ----*/
-          h_error.array() = inertia.array()*(omega.array() - des_omega.array());
+          std::cout << "LhumForiE " << ori_error_quat.vec() << "          " << ori_error_quat.w() << std::endl;
+          std::cout << "LhumForiE " << ori_error.array() << std::endl;
+          h_error.array() = (des_omega.array() - omega.array());//Lhum inertia.array()*
+          std::cout << "Lhumangtau h " << h_error.array() << std::endl;
 
-          angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
+          angtau.array() = hd_des.array() + ori_error.array();//Lhum + Kd_ang.array() * h_error.array();
+          std::cout << "Lhum  " << hd_des << "  !  " << Kd_ang << "   @   " << h_error << "   #   " << ori_error << std::endl;
+
+          std::cout << "Lhum2 " << Kp_ang << std::endl;
+          std::cout << "Lhum2 " << (ori_error_quat.w()*ori_error_quat.vec()[0] * Kp_ang[0]) << " % "
+                                << (ori_error_quat.w()*ori_error_quat.vec()[1] * Kp_ang[1]) << " ^ "
+                                << (ori_error_quat.w()*ori_error_quat.vec()[2] * Kp_ang[2]) << " & " << std::endl;
 
         }
 
@@ -261,7 +274,7 @@ dynamicgraph::Vector& ComImpedanceControl::
         // if (h_error[])
 
         // cout << ang_tau[1] << endl;
-
+        std::cout << "Lhumangtau " << angtau.array() << std::endl;
 
         sotDEBUGOUT(15);
         return angtau;
@@ -343,6 +356,8 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
     const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
     const dynamicgraph::Vector& mass = massSIN(t);
+    std::cout << "LhumLqr position " << position.array();
+    std::cout << "LhumLqr desposition " << des_pos.array();
 
     /*----- assertions of sizes -------------*/
     assert(Kp.size() == 3);
@@ -361,8 +376,8 @@ dynamicgraph::Vector& ComImpedanceControl::
         vel_error.array() = des_vel.array() - velocity.array();
         /*---------- computing tourques ----*/
 
-        tau.array() = des_fff.array() + mass.array()*(pos_error.array()*Kp.array()
-                      + vel_error.array()*Kd.array());
+        tau.array() = des_fff.array() + (pos_error.array()*Kp.array()
+                      + vel_error.array()*Kd.array());//Lhum mass.array()*
       }
 
     }
@@ -396,23 +411,29 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
 
     const dynamicgraph::Vector& abs_end_eff_vel = absendeffvelSIN(t);
+    std::cout << "L " << lctrl << "A " << actrl << std::endl;
 
-    end_forces.resize(30);
-    assert(thrcntvalue.size()==4);
-
+    end_forces.resize(g0.size());
+    int dimension = 3;
+    int number_of_legs = (g0.size() / dimension - 2) / 2;//number_of_legs * dimension + 2 * dimension +
+                                                           //number_of_legs * dimension
+    assert(thrcntvalue.size() == number_of_legs);
+    int number_of_columns = number_of_legs * dimension + 2 * dimension + number_of_legs * dimension;
+    int number_of_identity_columns = 2 * dimension + number_of_legs * dimension;
     if(isbiasset){
       if(thrcntvalue.sum() > 0.5){
-        ce0.resize(18);
+        ce0.resize(number_of_identity_columns);
         ce0.setZero();
         // cout << "started " << endl;
         assert(lctrl.size()==3);
         assert(actrl.size()==3);
-        assert(g0.size()== 30);
-        assert(ce0.size()==18);
+        assert(g0.size()== number_of_columns);
+        assert(ce0.size()==number_of_identity_columns);
 
 
         hess_new = hess;
         ce_new = ce;
+        ci_new = ci;
 
         /******* setting up the QP *************************/
 
@@ -426,83 +447,72 @@ dynamicgraph::Vector& ComImpedanceControl::
         // updating ce_new based on the desired absolute end effector velocity
         if (absendeffposSIN.isPlugged()) {
           const dynamicgraph::Vector& abs_end_eff_pos = absendeffposSIN(t);
-          for (int i = 0; i < 4; i++) {
+          for (int i = 0; i < number_of_legs; i++) {
             double x = abs_end_eff_pos(3 * i);
             double y = abs_end_eff_pos(3 * i + 1);
             double z = abs_end_eff_pos(3 * i + 2); // 0; // Always assumed to be on the floor.
+            std::cout << "Lhumz " << i << " " << x << " " << y << " " << z << std::endl;
             ce_new.block<3, 3>(3, 3 * i) << 0, -z,  y,
                                             z,  0, -x,
                                            -y,  x,  0;
           }
         }
 
-        for (int i=0; i < 12; i ++){
-            ce_new(i+6,i) = abs_end_eff_vel(i);
+        for (int i=0; i < number_of_legs * dimension; i++){
+            ce_new(i + 2 * dimension,i) = abs_end_eff_vel(i);
         }
 
 
         /******** setting elements of matrix to zero when foot is not
         ********* on the ground ***********************************************/
+        float mu = 1.0;
+        int condition_number = 5;
+        qp.problem(number_of_columns, number_of_identity_columns, number_of_identity_columns);
+        for(int i = 0; i < number_of_legs; i++)
+          if(thrcntvalue[i] < 0.2){
+            // setting the columns related to leg to zero since it is not on the ground
+            hess_new.col(0 + dimension * i).setZero();
+            hess_new.col(1 + dimension * i).setZero();
+            hess_new.col(2 + dimension * i).setZero();
 
-        qp.problem(30, 18, 18);
-
-        if(thrcntvalue[0] < 0.2){
-          // setting the columns related to Fl to zero since it is not on the ground
-          // cout << "FL not on ground" << endl;
-
-          hess_new.col(0).setZero();
-          hess_new.col(1).setZero();
-          hess_new.col(2).setZero();
-
-          ce_new.col(0).setZero();
-          ce_new.col(1).setZero();
-          ce_new.col(2).setZero();
-        }
-
-        if(thrcntvalue[1] < 0.2){
-          // setting the cols related to Fl to zero since it is not on the ground
-          // cout << "FR not on ground" << endl;
-
-          hess_new.col(3).setZero();
-          hess_new.col(4).setZero();
-          hess_new.col(5).setZero();
-
-          ce_new.col(3).setZero();
-          ce_new.col(4).setZero();
-          ce_new.col(5).setZero();
-        }
-
-        if(thrcntvalue[2] < 0.2){
-          // setting the cols related to Fl to zero since it is not on the ground
-          // cout << "HL on not ground" << endl;
-
-          hess_new.col(6).setZero();
-          hess_new.col(7).setZero();
-          hess_new.col(8).setZero();
-
-          ce_new.col(6).setZero();
-          ce_new.col(7).setZero();
-          ce_new.col(8).setZero();
-        }
-
-        if(thrcntvalue[3] < 0.2){
-          // setting the cols related to Fl to zero since it is not on the ground
-          // cout << "HR on ground" << endl;
-
-          hess_new.col(9).setZero();
-          hess_new.col(10).setZero();
-          hess_new.col(11).setZero();
-
-          ce_new.col(9).setZero();
-          ce_new.col(10).setZero();
-          ce_new.col(11).setZero();
-        }
+            ce_new.col(0 + dimension * i).setZero();
+            ce_new.col(1 + dimension * i).setZero();
+            ce_new.col(2 + dimension * i).setZero();
+          }
+          else{
+            std::cout << "Lhum ";
+            std::cout << i << endl;
+            ci_new(condition_number*i + 0, 3 * i + 0) = 1;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 0, 3 * i + 2) = -mu;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 1, 3 * i + 0) = -1;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 1, 3 * i + 2) = -mu;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 2, 3 * i + 1) = 1;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 2, 3 * i + 2) = -mu;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 3, 3 * i + 1) = -1;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 3, 3 * i + 2) = -mu;
+            std::cout << i << endl;
+            ci_new(condition_number*i + 4, 3 * i + 2) = -1;
+            std::cout << i << endl;
+         }
 
 
         // regularizing hessian
         hess_new += reg;
-
-        qp.solve(hess_new, g0, ce_new, ce0, ci, ci0);
+//        cout << "hess5" << hess_new << std::endl;
+//        cout << "hess_new: \n" << hess_new << std::endl;
+//        cout << "g0: \n" << g0 << std::endl;
+//        cout << "ce_new: \n" << ce_new << std::endl;
+//        cout << "ce0: \n" << ce0 << std::endl;
+//        cout << "ci_new: \n" << ci_new << std::endl;
+//        cout << "ci0: \n" << ci0 << std::endl;
+        qp.solve(hess_new, g0, ce_new, ce0, ci_new, ci0);
         end_forces = qp.result();
 
       }
@@ -517,8 +527,7 @@ dynamicgraph::Vector& ComImpedanceControl::
       end_forces.setZero();
     }
 
-    // cout << end_forces.array() << endl;
-
+     cout << "end_forces " << end_forces.array() << endl;
     return end_forces;
 
   }
@@ -633,7 +642,7 @@ dynamicgraph::Vector& ComImpedanceControl::
   }
 
 dynamicgraph::Vector& ComImpedanceControl::
-  threshold_cnt_sensor(dynamicgraph::Vector& thr_cnt_sensor, int t){
+  threshold_cnt_sensor(dynamicgraph::Vector& thr_cnt_sensor, int t){//TODO Lhum
     // This thresholds the values of the contact sensors
     // less than 0.2 is set to zero, and greater than 0.8 is set to 1
     // This is neccessary because the cnt_sensor is noisy at the extremes

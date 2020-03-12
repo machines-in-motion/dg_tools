@@ -22,13 +22,14 @@ from dynamic_graph.sot.core.switch import SwitchVector
 
 
 class QuadrupedLegImpedanceController():
-    def __init__(self, robot):
+    def __init__(self, robot, is_bolt = False):
         self.robot = robot
-
+        self.is_bolt = is_bolt
         self.imp_ctrl_leg_fl = LegImpedanceController("fl")
         self.imp_ctrl_leg_fr = LegImpedanceController("fr")
-        self.imp_ctrl_leg_hl = LegImpedanceController("hl")
-        self.imp_ctrl_leg_hr = LegImpedanceController("hr")
+        if not self.is_bolt:
+            self.imp_ctrl_leg_hl = LegImpedanceController("hl")
+            self.imp_ctrl_leg_hr = LegImpedanceController("hr")
 
     def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf = None, fff=None):
         """
@@ -49,9 +50,13 @@ class QuadrupedLegImpedanceController():
         plug(stack_zero((joint_positions_fl),"add_base_joint_position_fl"), self.imp_ctrl_leg_fl.robot_dg.position)
         plug(stack_zero((joint_velocities_fl), "add_base_joint_velocity_fl"), self.imp_ctrl_leg_fl.robot_dg.velocity )
 
-        des_pos_fl = selec_vector(des_pos, 0, 6, 'des_position_slicer_fl')
+        if self.is_bolt:
+            self.number_joint_per_left_legs = 3
+        else:
+            self.number_joint_per_left_legs = 6
+        des_pos_fl = selec_vector(des_pos, 0, self.number_joint_per_left_legs, 'des_position_slicer_fl')
         if des_vel is not None:
-            des_vel_fl = selec_vector(des_vel, 0, 6, 'des_veolcity_slicer_fl')
+            des_vel_fl = selec_vector(des_vel, 0, self.number_joint_per_left_legs, 'des_veolcity_slicer_fl')
         else:
             des_vel_fl = None
 
@@ -68,11 +73,11 @@ class QuadrupedLegImpedanceController():
         joint_velocities_fr = selec_vector(self.joint_velocities, 2, 4, 'velocity_slicer_fr')
 
         plug(stack_zero((joint_positions_fr),"add_base_joint_position_fr"), self.imp_ctrl_leg_fr.robot_dg.position)
-        plug(stack_zero((joint_velocities_fr), "add_base_joint_velocity_fr"), self.imp_ctrl_leg_fr.robot_dg.velocity )
+        plug(stack_zero((joint_velocities_fr), "add_base_joint_velocity_fr"), self.imp_ctrl_leg_fr.robot_dg.velocity)
 
-        des_pos_fr = selec_vector(des_pos, 6, 12, 'des_position_slicer_fr')
+        des_pos_fr = selec_vector(des_pos, self.number_joint_per_left_legs, 2 * self.number_joint_per_left_legs, 'des_position_slicer_fr')
         if des_vel is not None:
-            des_vel_fr = selec_vector(des_vel, 6, 12, 'des_veolcity_slicer_fr')
+            des_vel_fr = selec_vector(des_vel, self.number_joint_per_left_legs, 2 * self.number_joint_per_left_legs, 'des_veolcity_slicer_fr')
         else:
             des_vel_fr = None
 
@@ -84,55 +89,60 @@ class QuadrupedLegImpedanceController():
         control_torques_fr = self.imp_ctrl_leg_fr.return_control_torques(kp, des_pos_fr, kd, des_vel_fr, kf, fff_fr)
         # control_torques_fr = zero_vec(2, "zero_torque_fr")
 
-        ### For HL #############################################################
+        if not self.is_bolt:
+            ### For HL #############################################################
 
-        joint_positions_hl = selec_vector(self.joint_positions, 4, 6, 'position_slicer_hl')
-        joint_velocities_hl = selec_vector(self.joint_velocities, 4, 6, 'velocity_slicer_hl')
+            joint_positions_hl = selec_vector(self.joint_positions, 4, 6, 'position_slicer_hl')
+            joint_velocities_hl = selec_vector(self.joint_velocities, 4, 6, 'velocity_slicer_hl')
 
-        plug(stack_zero((joint_positions_hl),"add_base_joint_position_hl"), self.imp_ctrl_leg_hl.robot_dg.position)
-        plug(stack_zero((joint_velocities_hl), "add_base_joint_velocity_hl"), self.imp_ctrl_leg_hl.robot_dg.velocity )
+            plug(stack_zero((joint_positions_hl),"add_base_joint_position_hl"), self.imp_ctrl_leg_hl.robot_dg.position)
+            plug(stack_zero((joint_velocities_hl), "add_base_joint_velocity_hl"), self.imp_ctrl_leg_hl.robot_dg.velocity )
 
-        des_pos_hl = selec_vector(des_pos, 12, 18, 'des_position_slicer_hl')
-        if des_vel is not None:
-            des_vel_hl = selec_vector(des_vel, 12, 18, 'des_veolcity_slicer_hl')
-        else:
-            des_vel_hl = None
+            des_pos_hl = selec_vector(des_pos, 12, 18, 'des_position_slicer_hl')
+            if des_vel is not None:
+                des_vel_hl = selec_vector(des_vel, 12, 18, 'des_veolcity_slicer_hl')
+            else:
+                des_vel_hl = None
 
-        if fff is not None:
-            fff_hl = selec_vector(fff, 12, 18, 'fff_slicer_hl')
-        else:
-            fff_hl = None
+            if fff is not None:
+                fff_hl = selec_vector(fff, 12, 18, 'fff_slicer_hl')
+            else:
+                fff_hl = None
 
-        control_torques_hl = self.imp_ctrl_leg_hl.return_control_torques(kp, des_pos_hl, kd, des_vel_hl, kf, fff_hl)
+            control_torques_hl = self.imp_ctrl_leg_hl.return_control_torques(kp, des_pos_hl, kd, des_vel_hl, kf, fff_hl)
 
-        ## For HR ##############################################################
+            ## For HR ##############################################################
 
-        joint_positions_hr = selec_vector(self.joint_positions, 6, 8, 'position_slicer_hr')
-        joint_velocities_hr = selec_vector(self.joint_velocities, 6, 8, 'velocity_slicer_hr')
+            joint_positions_hr = selec_vector(self.joint_positions, 6, 8, 'position_slicer_hr')
+            joint_velocities_hr = selec_vector(self.joint_velocities, 6, 8, 'velocity_slicer_hr')
 
-        plug(stack_zero((joint_positions_hr),"add_base_joint_position_hr"), self.imp_ctrl_leg_hr.robot_dg.position)
-        plug(stack_zero((joint_velocities_hr), "add_base_joint_velocity_hr"), self.imp_ctrl_leg_hr.robot_dg.velocity )
+            plug(stack_zero((joint_positions_hr),"add_base_joint_position_hr"), self.imp_ctrl_leg_hr.robot_dg.position)
+            plug(stack_zero((joint_velocities_hr), "add_base_joint_velocity_hr"), self.imp_ctrl_leg_hr.robot_dg.velocity )
 
-        des_pos_hr = selec_vector(des_pos, 18, 24, 'des_position_slicer_hr')
-        if des_vel is not None:
-            des_vel_hr = selec_vector(des_vel, 18, 24, 'des_veolcity_slicer_hr')
-        else:
-            des_vel_hr = None
+            des_pos_hr = selec_vector(des_pos, 18, 24, 'des_position_slicer_hr')
+            if des_vel is not None:
+                des_vel_hr = selec_vector(des_vel, 18, 24, 'des_veolcity_slicer_hr')
+            else:
+                des_vel_hr = None
 
-        if fff is not None:
-            fff_hr = selec_vector(fff, 18, 24, 'fff_slicer_hr')
-        else:
-            fff_hr = None
+            if fff is not None:
+                fff_hr = selec_vector(fff, 18, 24, 'fff_slicer_hr')
+            else:
+                fff_hr = None
 
-        control_torques_hr = self.imp_ctrl_leg_hr.return_control_torques(kp, des_pos_hr, kd, des_vel_hr, kf, fff_hr)
-        # control_torques_hr = zero_vec(2, "zero_torque_hr")
+            control_torques_hr = self.imp_ctrl_leg_hr.return_control_torques(kp, des_pos_hr, kd, des_vel_hr, kf, fff_hr)
+            # control_torques_hr = zero_vec(2, "zero_torque_hr")
 
         ####################### Stacking torques of each leg into one vector #####
 
         control_torques_fl_fr = stack_two_vectors(control_torques_fl, control_torques_fr, 2, 2)
-        control_torques_hl_hr = stack_two_vectors(control_torques_hl, control_torques_hr, 2, 2)
 
-        control_torques = stack_two_vectors(control_torques_fl_fr,control_torques_hl_hr, 4, 4)
+        if not self.is_bolt:
+            control_torques_hl_hr = stack_two_vectors(control_torques_hl, control_torques_hr, 2, 2)
+
+            control_torques = stack_two_vectors(control_torques_fl_fr, control_torques_hl_hr, 4, 4)
+        else:
+            control_torques = control_torques_fl_fr
 
         return control_torques
 
@@ -153,20 +163,22 @@ class QuadrupedLegImpedanceController():
     def record_data(self, record_vicon = False):
         self.imp_ctrl_leg_fl.record_data(self.robot)
         self.imp_ctrl_leg_fr.record_data(self.robot)
-        self.imp_ctrl_leg_hl.record_data(self.robot)
-        self.imp_ctrl_leg_hr.record_data(self.robot)
+        if not self.is_bolt:
+            self.imp_ctrl_leg_hl.record_data(self.robot)
+            self.imp_ctrl_leg_hr.record_data(self.robot)
 
 
 class QuadrupedComControl(object):
     def __init__(self, robot, ViconClientEntity=None, client_name = "vicon_client",
                  vicon_ip = '10.32.3.16:801', EntityName = "quad_com_ctrl",
-                 base_position=None, base_velocity=None):
+                 base_position=None, base_velocity=None, is_bolt = False):
         """
         Args:
           base_position: (Optional, Vec7d signal) Base position of the robot.
           base_velocity: (Optional, Vec6d signal) Base velocity of the robot.
         """
         self.robot = robot
+        self.is_bolt = is_bolt
 
         self.EntityName = EntityName
         self.init_robot_properties()
@@ -288,6 +300,15 @@ class QuadrupedComControl(object):
                     self.base_orientation, 3, 4, self.EntityName + '_biased_base_pos')
         return self._biased_base_position
 
+    def get_biased_base_yaw(self):
+        """
+        Return the robot yaw taking the bias offset into account.
+
+        Returns:
+            Signal<dg::vector> of size 1
+        """
+        return self.base_orientation
+
     def get_biased_base_velocity(self):
         """
         Return the robot velocity taking the bias offset into account.
@@ -352,13 +373,13 @@ class QuadrupedComControl(object):
                                         + "_velocity_body"),3, 6, "selec_ang_dxyz")
 
         #### LQR equation:
-        ###should be removed
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp_ang)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd_ang)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.inertia)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.mass)
+        # ###should be removed
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp_ang)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd_ang)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.inertia)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.mass)
 
         ###
         plug(des_lqr, self.com_imp_ctrl.lqr_gain)
@@ -413,14 +434,14 @@ class QuadrupedComControl(object):
                                         + "_velocity_body"),3, 6, "selec_ang_dxyz")
 
         #### LQR equation:
-        ###should be removed
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp_ang)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd_ang)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.inertia)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.mass)
-        plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.des_fft)
+        # ###should be removed
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kp_ang)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.Kd_ang)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.inertia)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.mass)
+        # plug(constVector([0.0, 0.0, 0.0], "Kp_ang"), self.com_imp_ctrl.des_fft)
 
 
         ###
@@ -441,30 +462,36 @@ class QuadrupedComControl(object):
 
         torques_fr = selec_vector(lqr_end_eff_force, 3, 6, self.EntityName + "torques_fr")
 
-        torques_hl = selec_vector(lqr_end_eff_force, 6, 9, self.EntityName + "torques_hl")
+        if not self.is_bolt:
+            torques_hl = selec_vector(lqr_end_eff_force, 6, 9, self.EntityName + "torques_hl")
 
-        torques_hr = selec_vector(lqr_end_eff_force, 9, 12, self.EntityName + "torques_hr")
+            torques_hr = selec_vector(lqr_end_eff_force, 9, 12, self.EntityName + "torques_hr")
 
         torques_fl_6d = stack_two_vectors(torques_fl,
                                             zero_vec(3, "stack_fl_tau"), 3, 3)
         torques_fr_6d = stack_two_vectors(torques_fr,
                                             zero_vec(3, "stack_fr_tau"), 3, 3)
-        torques_hl_6d = stack_two_vectors(torques_hl,
-                                            zero_vec(3, "stack_hl_tau"), 3, 3)
-        torques_hr_6d = stack_two_vectors(torques_hr,
-                                            zero_vec(3, "stack_hr_tau"), 3, 3)
+
+        if not self.is_bolt:
+            torques_hl_6d = stack_two_vectors(torques_hl,
+                                                zero_vec(3, "stack_hl_tau"), 3, 3)
+            torques_hr_6d = stack_two_vectors(torques_hr,
+                                                zero_vec(3, "stack_hr_tau"), 3, 3)
 
         torques_fl_fr = stack_two_vectors(torques_fl_6d,torques_fr_6d, 6, 6)
-        torques_hl_hr = stack_two_vectors(torques_hl_6d,torques_hr_6d, 6, 6)
+        if not self.is_bolt:
+            torques_hl_hr = stack_two_vectors(torques_hl_6d,torques_hr_6d, 6, 6)
 
-        lqr_end_eff_force_24d = stack_two_vectors(torques_fl_fr, torques_hl_hr, 12, 12)
+            lqr_end_eff_force_24d = stack_two_vectors(torques_fl_fr, torques_hl_hr, 12, 12)
+        else:
+            lqr_end_eff_force_24d = torques_fl_fr
         lqr_end_eff_force_24d = mul_double_vec(1.0, lqr_end_eff_force_24d,"lqr_end_eff_force")
 
 
         return lqr_end_eff_force_24d
 
 
-    def return_com_torques(self, com_tau, ang_tau, des_abs_vel, hess, g0, ce, ci, ci0, reg, cnt_plan = None):
+    def return_com_forces(self, com_tau, ang_tau, des_abs_vel, hess, g0, ce, ci, ci0, reg, cnt_plan = None):
         ### This divides forces using the wbc controller
 
         plug(com_tau, self.com_imp_ctrl.lctrl)
@@ -493,35 +520,39 @@ class QuadrupedComControl(object):
         # hl_cnt_value = self.convert_cnt_value_to_3d(thr_cnt_sensor, 2, 3, "hl_cnt_3d")
         # hr_cnt_value = self.convert_cnt_value_to_3d(thr_cnt_sensor, 3, 4, "hr_cnt_3d")
 
-        torques_fl = selec_vector(self.wb_ctrl, 0, 3, self.EntityName + "torques_fl")
-#        torques_fl = mul_vec_vec(fl_cnt_value, torques_fl, self.EntityName + "fused_torques_fl")
+        forces_fl = selec_vector(self.wb_ctrl, 0, 3, self.EntityName + "forces_fl")
+#        forces_fl = mul_vec_vec(fl_cnt_value, forces_fl, self.EntityName + "fused_forces_fl")
 
-        torques_fr = selec_vector(self.wb_ctrl, 3, 6, self.EntityName + "torques_fr")
-#        torques_fr = mul_vec_vec(fr_cnt_value, torques_fr, self.EntityName + "fused_torques_fr")
+        forces_fr = selec_vector(self.wb_ctrl, 3, 6, self.EntityName + "forces_fr")
+#        forces_fr = mul_vec_vec(fr_cnt_value, forces_fr, self.EntityName + "fused_forces_fr")
+        if not self.is_bolt:
+            forces_hl = selec_vector(self.wb_ctrl, 6, 9, self.EntityName + "forces_hl")
+    #        forces_hl = mul_vec_vec(hl_cnt_value, torques_hl, self.EntityName + "fused_forces_hl")
 
-        torques_hl = selec_vector(self.wb_ctrl, 6, 9, self.EntityName + "torques_hl")
-#        torques_hl = mul_vec_vec(hl_cnt_value, torques_hl, self.EntityName + "fused_torques_hl")
+            forces_hr = selec_vector(self.wb_ctrl, 9, 12, self.EntityName + "forces_hr")
+    #        forces_hr = mul_vec_vec(hr_cnt_value, torques_hr, self.EntityName + "fused_forces_hr")
 
-        torques_hr = selec_vector(self.wb_ctrl, 9, 12, self.EntityName + "torques_hr")
-#        torques_hr = mul_vec_vec(hr_cnt_value, torques_hr, self.EntityName + "fused_torques_hr")
-
-        torques_fl_6d = stack_two_vectors(torques_fl,
+        forces_fl_6d = stack_two_vectors(forces_fl,
                                             zero_vec(3, "stack_fl_tau"), 3, 3)
-        torques_fr_6d = stack_two_vectors(torques_fr,
+        forces_fr_6d = stack_two_vectors(forces_fr,
                                             zero_vec(3, "stack_fr_tau"), 3, 3)
-        torques_hl_6d = stack_two_vectors(torques_hl,
-                                            zero_vec(3, "stack_hl_tau"), 3, 3)
-        torques_hr_6d = stack_two_vectors(torques_hr,
-                                            zero_vec(3, "stack_hr_tau"), 3, 3)
+        if not self.is_bolt:
+            forces_hl_6d = stack_two_vectors(forces_hl,
+                                                zero_vec(3, "stack_hl_tau"), 3, 3)
+            forces_hr_6d = stack_two_vectors(forces_hr,
+                                                zero_vec(3, "stack_hr_tau"), 3, 3)
 
-        torques_fl_fr = stack_two_vectors(torques_fl_6d,torques_fr_6d, 6, 6)
-        torques_hl_hr = stack_two_vectors(torques_hl_6d,torques_hr_6d, 6, 6)
+        forces_fl_fr = stack_two_vectors(forces_fl_6d, forces_fr_6d, 6, 6)
+        if not self.is_bolt:
+            forces_hl_hr = stack_two_vectors(forces_hl_6d,forces_hr_6d, 6, 6)
 
-        wbc_torques = stack_two_vectors(torques_fl_fr, torques_hl_hr, 12, 12)
-        ## hack to allow tracking of torques
-        wbc_torques = mul_double_vec(1.0, wbc_torques,"com_torques")
+            wbc_forces = stack_two_vectors(forces_fl_fr, forces_hl_hr, 12, 12)
+        else:
+            wbc_forces = forces_fl_fr
+        ## hack to allow tracking of forces
+        wbc_forces = mul_double_vec(1.0, wbc_forces,"com_forces")
 
-        return wbc_torques
+        return wbc_forces
 
     def record_data(self):
         self.get_biased_base_position()
@@ -535,6 +566,9 @@ class QuadrupedComControl(object):
 
         self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
         self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
+
+        self.robot.add_trace(self.EntityName + 'forces_fl', 'sout')
+        self.robot.add_trace(self.EntityName + 'forces_fr', 'sout')
 
         self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
@@ -552,7 +586,7 @@ class QuadrupedComControl(object):
         # self.robot.add_trace(self.EntityName, "thr_cnt_sensor")
         # self.robot.add_ros_and_trace(self.EntityName, "thr_cnt_sensor")
         #
-        self.robot.add_trace("com_torques", "sout")
+        self.robot.add_trace("com_forces", "sout")
         # self.robot.add_ros_and_trace("com_torques", "sout")
 
         # self.robot.add_trace(self.EntityName, "end_eff_lqr_tau")
