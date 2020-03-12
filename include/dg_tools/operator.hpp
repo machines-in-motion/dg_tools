@@ -63,6 +63,48 @@ namespace dg_tools {
   };
 
   /**
+   * @brief Converts Quaternion into RotationMatrixYaw with data.
+   */
+  class Operator_EXPORTS QuaternionToMatrixYaw: public dg::Entity
+  {
+    public:
+
+      QuaternionToMatrixYaw( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> sin_;
+      dg::SignalTimeDependent<dg::Matrix,int> sout_;
+      dynamicgraph::sot::VectorQuaternion quat_;
+      Eigen::Vector3d rpy_;
+
+      dg::Matrix& data_out_callback(dg::Matrix& s, int time);
+  };
+
+  /**
+   * @brief Converts Quaternion into RotationMatrixYaw with data.
+   */
+  class Operator_EXPORTS QuaternionToQuaternionYaw: public dg::Entity
+  {
+    public:
+
+      QuaternionToQuaternionYaw( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> sin_;
+      dg::SignalTimeDependent<dg::Vector,int> sout_;
+      dynamicgraph::sot::VectorQuaternion quat_;
+      Eigen::Vector3d rpy_;
+      Eigen::Vector3d unit_x_;
+      Eigen::Vector3d unit_x_rotated_;
+
+      dg::Vector& data_out_callback(dg::Vector& s, int time);
+  };
+
+  /**
    * @brief Given input data x, compute y = sin(x).
    */
   class Operator_EXPORTS SinEntity: public dg::Entity

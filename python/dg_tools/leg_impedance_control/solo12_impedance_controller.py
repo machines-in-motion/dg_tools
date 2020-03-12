@@ -49,7 +49,7 @@ class Solo12ComController(QuadrupedComControl):
             self.get_biased_base_position(),
             self.robot.device.joint_positions, 6, 12)
         self.robot_velocity = stack_two_vectors(
-            self.get_biased_base_velocity(),
+            self.get_biased_base_velocity_body(),
             self.robot.device.joint_velocities, 6, 12)
 
         dg.plug(self.robot_position, self.robot_dg.position)
@@ -229,6 +229,9 @@ class Solo12LegImpedanceController(object):
 
         robot.add_trace("pos_error_" + self.leg_name, "sout")
         # robot.add_ros_and_trace("pos_error_" + self.leg_name, "sout")
+
+        robot.add_trace("pos_error_" + self.leg_name, "sin1")
+        robot.add_trace("pos_error_" + self.leg_name, "sin2")
 
         robot.add_trace("vel_error_" + self.leg_name, "sout")
         # robot.add_ros_and_trace("vel_error_" + self.leg_name, "sout")

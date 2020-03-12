@@ -16,11 +16,11 @@
 
 using namespace dg_tools;
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PoseQuaternionToPoseRPY, "PoseQuaternionToPoseRPY");
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PoseQuaternionToPoseRPY, "PoseQuaternionToPoseRPY");
 
 PoseQuaternionToPoseRPY::PoseQuaternionToPoseRPY( const std::string & name )
  :Entity(name)
@@ -31,10 +31,6 @@ PoseQuaternionToPoseRPY::PoseQuaternionToPoseRPY( const std::string & name )
 {
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
 }
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time)
 {
@@ -47,11 +43,78 @@ dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time
     return out;
 }
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SinEntity, "Sin");
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(QuaternionToMatrixYaw, "QuaternionToMatrixYaw");
+
+QuaternionToMatrixYaw::QuaternionToMatrixYaw( const std::string & name )
+ :Entity(name)
+ ,sin_(NULL,"QuaternionToMatrixYaw("+name+")::input(vector)::sin")
+ ,sout_( boost::bind(&QuaternionToMatrixYaw::data_out_callback,this,_1,_2),
+         sin_,
+        "QuaternionToMatrixYaw("+name+")::output(vector)::sout" )
+{
+  Entity::signalRegistration(sin_ << sout_);
+}
+
+dg::Matrix& QuaternionToMatrixYaw::data_out_callback(dg::Matrix& out, int time)
+{
+    const dg::Vector& input = sin_(time);
+    quat_.x() = input(0);
+    quat_.y() = input(1);
+    quat_.z() = input(2);
+    quat_.w() = input(3);
+
+    rpy_ = quat_.toRotationMatrix().eulerAngles(2, 1, 0).reverse();
+
+    out = Eigen::AngleAxisd(rpy_(2), Eigen::Vector3d::UnitZ()).matrix();
+
+    return out;
+}
 
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(QuaternionToQuaternionYaw, "QuaternionToQuaternionYaw");
+
+QuaternionToQuaternionYaw::QuaternionToQuaternionYaw( const std::string & name )
+ :Entity(name)
+ ,sin_(NULL,"QuaternionToQuaternionYaw("+name+")::input(vector)::sin")
+ ,sout_( boost::bind(&QuaternionToQuaternionYaw::data_out_callback,this,_1,_2),
+         sin_,
+        "QuaternionToQuaternionYaw("+name+")::output(vector)::sout" )
+{
+  Entity::signalRegistration(sin_ << sout_);
+}
+
+dg::Vector& QuaternionToQuaternionYaw::data_out_callback(dg::Vector& out, int time)
+{
+    const dg::Vector& input = sin_(time);
+    quat_.x() = input(0);
+    quat_.y() = input(1);
+    quat_.z() = input(2);
+    quat_.w() = input(3);
+
+    // unit_x_, unit_x_rotated_
+    rpy_ = quat_.toRotationMatrix().eulerAngles(2, 1, 0).reverse();
+    quat_ = Eigen::AngleAxisd(rpy_(2), Eigen::Vector3d::UnitZ());
+    
+    out(0) = quat_.x();
+    out(1) = quat_.y();
+    out(2) = quat_.z();
+    out(3) = quat_.w();
+
+    return out;
+}
+
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SinEntity, "Sin");
 
 SinEntity::SinEntity( const std::string & name )
  :Entity(name)
@@ -63,22 +126,17 @@ SinEntity::SinEntity( const std::string & name )
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
 }
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
 double& SinEntity::data_out_callback(double& out, int time)
 {
     out = sin(data_inputSIN.access(time));
     return out;
 }
 
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Division_of_double, "Division_of_double");
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 Division_of_double::Division_of_double( const std::string & name )
  :Entity(name)
@@ -91,23 +149,17 @@ Division_of_double::Division_of_double( const std::string & name )
   Entity::signalRegistration(data_input1SIN << data_input2SIN << data_outSOUT);
 }
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
 double& Division_of_double::data_out_callback(double& out, int time)
 {
     out = data_input1SIN.access(time) / data_input2SIN.access(time);
     return out;
 }
 
-
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(VectorIntegrator, "VectorIntegrator");
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 VectorIntegrator::VectorIntegrator( const std::string & name )
  :Entity(name)
@@ -122,10 +174,6 @@ VectorIntegrator::VectorIntegrator( const std::string & name )
   data_outSOUT.setDependencyType(
         dynamicgraph::TimeDependency<int>::ALWAYS_READY);
 }
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 dg::Vector& VectorIntegrator::data_out_callback(dg::Vector& out, int time)
 {
