@@ -11,10 +11,10 @@
 #################### Imports #################################################
 
 from dg_tools.utils import *
-from dg_tools.traj_generators import mul_double_vec_2
+from dg_tools.math_small_entities import mul_double_vec_2
 
 from py_robot_properties_teststand.config import TeststandConfig
-import dynamic_graph.sot.dynamics_pinocchio as dp
+import dynamic_graph.sot.dynamic_pinocchio as dp
 
 
 #############################################################################
