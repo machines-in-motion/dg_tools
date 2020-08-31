@@ -30,9 +30,10 @@ search_for_eigen()
 search_for_python()
 
 # Trigger dependency to dynamic-graph.
-add_required_dependency("eigen-quadprog")
-add_required_dependency("dynamic-graph >= 3.0.0")
-add_required_dependency("dynamic-graph-python >= 3.0.0")
+catkin_add_required_dependency("eigen-quadprog")
+catkin_add_required_dependency("dynamic-graph >= 3.0.0")
+catkin_add_required_dependency("dynamic-graph-python >= 3.0.0")
+set(catkin_LIBRARIES ${catkin_LIBRARIES} eigen-quadprog)
 
 ######################################################
 # define the include directory of all ${CATKIN_PKGS} #
