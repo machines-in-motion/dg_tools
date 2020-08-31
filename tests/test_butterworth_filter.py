@@ -44,7 +44,6 @@ class TestButterWorthFilter(unittest.TestCase):
 
         y = np.array(y)
         y_result = TestButterWorthFilter.y_result()
-
         self.assertTrue(np.allclose(y, y_result))
 
     @staticmethod

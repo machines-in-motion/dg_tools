@@ -65,11 +65,11 @@ namespace dg_tools {
   /**
    * @brief Given input data x, compute y = sin(x).
    */
-  class Operator_EXPORTS SinEntity: public dg::Entity
+  class Operator_EXPORTS Sinus: public dg::Entity
   {
     public:
 
-      SinEntity( const std::string & name );
+      Sinus( const std::string & name );
 
       static const std::string CLASS_NAME;
       virtual const std::string& getClassName( void ) const {return CLASS_NAME;}

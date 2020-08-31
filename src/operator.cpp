@@ -47,18 +47,18 @@ dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time
     return out;
 }
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SinEntity, "Sin");
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Sinus, "Sinus");
 
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-SinEntity::SinEntity( const std::string & name )
+Sinus::Sinus( const std::string & name )
  :Entity(name)
- ,data_inputSIN(NULL,"Sine("+name+")::input(double)::sin")
- ,data_outSOUT( boost::bind(&SinEntity::data_out_callback,this,_1,_2),
+ ,data_inputSIN(NULL,"Sinus("+name+")::input(double)::sin")
+ ,data_outSOUT( boost::bind(&Sinus::data_out_callback,this,_1,_2),
          data_inputSIN,
-        "SinEntity("+name+")::output(double)::sout" )
+        "Sinus("+name+")::output(double)::sout" )
 {
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
 }
@@ -67,7 +67,7 @@ SinEntity::SinEntity( const std::string & name )
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-double& SinEntity::data_out_callback(double& out, int time)
+double& Sinus::data_out_callback(double& out, int time)
 {
     out = sin(data_inputSIN.access(time));
     return out;
