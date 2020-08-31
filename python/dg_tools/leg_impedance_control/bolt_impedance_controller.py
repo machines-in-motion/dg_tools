@@ -23,7 +23,7 @@ from dg_tools.leg_impedance_control.leg_impedance_controller import LegImpedance
 class BoltComController(QuadrupedComControl):
     def init_robot_properties(self):
         self.robot_vicon_name = "Bolt"
-        self.robot_mass = 3 * [1.13]
+        self.robot_mass = 3 * [1]#[BoltConfig.mass]
 
         # TODO: Provide the new base inertia here.
         self.robot_base_inertia = [0.00578574, 0.01938108, 0.02476124]
@@ -31,6 +31,7 @@ class BoltComController(QuadrupedComControl):
         self.number_of_legs = 2
         self.number_of_joints_per_leg = 3
         self.number_of_joints = self.number_of_legs * self.number_of_joints_per_leg
+        self.record_data()
 
     def track_com(self):
         """Instead of tracking the biased base position and velocity, track the
@@ -42,9 +43,14 @@ class BoltComController(QuadrupedComControl):
         self.robot_dg.setModel(self.robot_pin.model)
         self.robot_dg.setData(self.robot_pin.data)
 
-        self.robot_position = stack_two_vectors(
+
+        base_position_rpy = basePoseQuat2PoseRPY(
             self.get_biased_base_position(),
-            self.robot.device.joint_positions, 6, self.number_of_joints)#Lhum change it
+            'base_position_rpy')#Lhum rpy
+
+        self.robot_position = stack_two_vectors(
+            base_position_rpy,#Lhum rpy
+            self.robot.device.joint_positions, 6, self.number_of_joints)
         self.robot_velocity = stack_two_vectors(
             self.get_biased_base_velocity(),
             self.robot.device.joint_velocities, 6, self.number_of_joints)
@@ -58,19 +64,21 @@ class BoltComController(QuadrupedComControl):
         self.robot_vcom = multiply_mat_vec(
             self.robot_dg.Jcom, self.robot_velocity, self.EntityName + '_pin_vcom')
 
+        print("Lhum ^^^^^^^^^^^^")
         dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
         dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
 
     def record_data(self):
-        super(BoltComController, self).record_data()
+        # super(BoltComController, self).record_data()
 
+        # robot.add_trace("base_position_rpy" , "sout")
         if self.robot_pin:
             self.robot.add_trace(self.EntityName + '_pin_com', 'sout')
-            self.robot.add_trace(self.EntityName + '_pin_vcom', 'sout')
+            # self.robot.add_trace(self.EntityName + '_pin_vcom', 'sout')
 
     def return_com_torques(self, *args, **kwargs):
         """
-        @return 12-dim vector with forces at each endeffector.
+        @return 6-dim vector with forces at each endeffector.
         """
         super(BoltComController, self).return_com_torques(*args, **kwargs)
         return self.wb_ctrl
@@ -97,7 +105,7 @@ class BoltLegImpedanceController(object):
 
         self.robot_dg.createJacobianEndEffWorld(
             'jac_cnt_' + self.leg_name, self.leg_name + '_ANKLE')
-        self.robot_dg.createPosition('pos_hip_' + self.leg_name, self.leg_name + '_HFE')
+        self.robot_dg.createPosition('pos_hip_' + self.leg_name, self.leg_name + '_HAA')
         self.robot_dg.createPosition('pos_foot_' + self.leg_name, self.leg_name + '_ANKLE')
 
         self.robot_dg.acceleration.value = (6 + self.number_of_joints) * (0.0, )
@@ -137,6 +145,13 @@ class BoltLegImpedanceController(object):
                                 "neg_op_" + self.leg_name)
         control_torques = multiply_mat_vec(
             self.jacT, errors, "compute_control_torques_" + self.leg_name)
+
+        c1 = constVector([1.0, 0.0, 0.0], "c1")
+        c2 = constVector([0.0, 1.0, 0.0], "c2")
+        c3 = constVector([0.0, 0.0, 1.0], "c3")
+        mc1 = multiply_mat_vec(self.jac, c1, "mc1" + self.leg_name)
+        mc2 = multiply_mat_vec(self.jac, c2, "mc2" + self.leg_name)
+        mc3 = multiply_mat_vec(self.jac, c3, "mc3" + self.leg_name)
         return control_torques
 
     def compute_control_torques(self, kp, kd, kf, des_pos, des_vel, fff, pos_global=False):
@@ -166,6 +181,10 @@ class BoltLegImpedanceController(object):
         self.rct_args["pos_global"] = pos_global
 
         self.jac = self._compute_jacobian()
+        # self.rotaion_transpose = MatrixTranspose("")
+        # plug(convert_quat_se3(self.vicon_base_position_raw, self.prefix + '_base_vicon_rpy') , self.rotaion_transpose.sin)
+        #
+        # self.RJac = multiply_mat_vec(self.rotation_transpose.sout, self.jac, "RJac")
         self.rel_pos_foot = self._compute_leg_length()
 
         if pos_global:
@@ -199,6 +218,11 @@ class BoltLegImpedanceController(object):
         else:
             self.pd_error = pos_error_with_gains
 
+
+        """
+        Computes torques tau = JacT*(errors).
+        """
+
         if kf is not None and fff is not None:
             print("fff is plugged ....")
             mul_kf_gains = Multiply_double_vector("Kf_" + self.leg_name)
@@ -222,32 +246,40 @@ class BoltLegImpedanceController(object):
 
     def record_data(self, robot):
         robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("rel_pos_foot_" + self.leg_name, "sout")
+        # robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
 
-        robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("rel_vel_foot_" + self.leg_name, "sout")
-
-        robot.add_trace("pos_error_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("pos_error_" + self.leg_name, "sout")
-
-        robot.add_trace("vel_error_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("vel_error_" + self.leg_name, "sout")
-
-        robot.add_trace("est_f_" + self.leg_name, "sout")
-        robot.add_ros_and_trace("est_f_" + self.leg_name, "sout")
-
-        robot.add_trace("pd_error_" + self.leg_name, "sout")
-        robot.add_trace("kp_split_" + self.leg_name, "sout")
-
+        # robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
+        # robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
+        #
+        # robot.add_trace("pos_error_" + self.leg_name, "sout")
+        # robot.add_trace("pos_error_" + self.leg_name, "sout")
+        #
+        # robot.add_trace("vel_error_" + self.leg_name, "sout")
+        # robot.add_trace("vel_error_" + self.leg_name, "sout")
+        #
+        # robot.add_trace("est_f_" + self.leg_name, "sout")
+        # robot.add_trace("est_f_" + self.leg_name, "sout")
+        #
+        # robot.add_trace("pd_error_" + self.leg_name, "sout")
+        # robot.add_trace("kp_split_" + self.leg_name, "sout")
+        #
         robot.add_trace("compute_control_torques_" + self.leg_name, "sout")
-        robot.add_trace("compute_control_torques_" + self.leg_name, "sout")
-
-        if (self.rct_args["kf"] is not None and
-                self.rct_args["fff"] is not None):
-            robot.add_trace("total_error_" + self.leg_name, "sout")
-            robot.add_ros_and_trace("total_error_" + self.leg_name, "sout")
+        robot.add_trace("neg_op_" + self.leg_name, "sout")
+        robot.add_trace("Kf_" + self.leg_name, "sout")
+        # robot.add_trace(self.jacT.name, "sout")
+        #
+        # if (self.rct_args["kf"] is not None and
+        #         self.rct_args["fff"] is not None):
+        #     robot.add_trace("total_error_" + self.leg_name, "sout")
+        #     robot.add_trace("total_error_" + self.leg_name, "sout")
 
         robot.add_trace("xyzpos_foot_" + self.leg_name, "sout")
+        # robot.add_ros_and_trace(robot.device.joint_positions, "sout")
+        robot.add_trace("xyzpos_hip_" + self.leg_name, "sout")
+
+        robot.add_trace("mc1" + self.leg_name, "sout")
+        robot.add_trace("mc2" + self.leg_name, "sout")
+        robot.add_trace("mc3" + self.leg_name, "sout")
 
 
 class BoltImpedanceController(object):
@@ -265,9 +297,6 @@ class BoltImpedanceController(object):
         for leg_name, leg_idx in zip(['FL', 'FR'], self.leg_idx):
             self.leg_imp_ctrl.append(
                 BoltLegImpedanceController(leg_name, leg_idx))
-            print("@@@@@@@@@@@@@@@@@@@@@@")
-            print(leg_name)
-            print(leg_idx)
 
         self.abs_end_eff_pos = None
         self.abs_end_eff_vel = None
@@ -282,7 +311,7 @@ class BoltImpedanceController(object):
         """ Helper for slicing the desired vector for a leg.
 
         Args:
-            vec: (1*12 vector or None) Vector to slice for a given leg
+            vec: (1*6 vector or None) Vector to slice for a given leg
             leg_idx: (int) Leg index to slice the vector for
             name: (str) Name for the slicing operator to use.
 
@@ -302,16 +331,16 @@ class BoltImpedanceController(object):
 
         Args:
             Kp: (double) proportional gain (double)
-            des_pos: (1*12 vector) desired_position in current time step
+            des_pos: (1*6 vector) desired_position in current time step
             Kd: derivative gain (double)
-            des_vel: (1*12 vector) desired_velocity in current time step
-            fff: (1*12 vector) Feed forward force
+            des_vel: (1*6 vector) desired_velocity in current time step
+            fff: (1*6 vector) Feed forward force
             base_position: (1*7 vector, optional) Base position (translation + quaternion)
             base_velocity: (1*6 vector, optional) Base velocity (translation + rotation)
             pos_global: If true, track des_pos in global frame.
                 Requires base_position and base_velocity to be set.
         Returns:
-            Final joint torques (1 * 12 vector)
+            Final joint torques (1 * 6 vector)
         """
         # self.robot = robot
         self.des_pos = vectorIdentity(des_pos, self.number_of_legs * self.dimention, "imp_ctrl_des_pos")
@@ -332,8 +361,6 @@ class BoltImpedanceController(object):
         self.robot_velocity = stack_two_vectors(base_velocity, self.joint_velocities, 6, self.number_of_joints)
 
         for leg_idx, imp_controller in enumerate(self.leg_imp_ctrl):
-            print("#################")
-            print("Lhum ", leg_idx)
             leg_name = imp_controller.leg_name
             dg.plug(self.robot_position, imp_controller.robot_dg.position)
             dg.plug(self.robot_velocity, imp_controller.robot_dg.velocity)
@@ -363,7 +390,7 @@ class BoltImpedanceController(object):
         """Returns the endeffector positions wrt com position in world frame.
 
         Returns:
-          Signal<dg::Vector, size=12> Stack of the four endeffector positions
+          Signal<dg::Vector, size=6> Stack of the four endeffector positions
         """
         if self.com_end_eff_pos:
             return self.com_end_eff_pos
@@ -382,7 +409,7 @@ class BoltImpedanceController(object):
         """Returns the endeffector positions wrt world frame.
 
         Returns:
-          Signal<dg::Vector, size=12> Stack of the four endeffector positions
+          Signal<dg::Vector, size=6> Stack of the four endeffector positions
         """
         if self.abs_end_eff_pos:
             return self.abs_end_eff_pos
@@ -415,14 +442,14 @@ class BoltImpedanceController(object):
         for imp_controller in self.leg_imp_ctrl:
             imp_controller.record_data(self.robot)
 
-        self.compute_abs_end_eff_pos()
-        self.compute_abs_end_eff_vel()
-
-        self.robot.add_trace("imp_ctrl_des_pos", "sout")
-        self.robot.add_trace("imp_ctrl_des_vel", "sout")
-        self.robot.add_trace("imp_ctrl_fff", "sout")
-        self.robot.add_trace("imp_ctrl_abs_end_eff_pos", "sout")
-        self.robot.add_trace("imp_ctrl_abs_end_eff_vel", "sout")
-        self.robot.add_trace("fff_slice_FR", "sout")
-        self.robot.add_trace("fff_slice_FL", "sout")
+        # self.compute_abs_end_eff_pos()
+        # self.compute_abs_end_eff_vel()
+        #
+        # self.robot.add_trace("imp_ctrl_des_pos", "sout")
+        # self.robot.add_trace("imp_ctrl_des_vel", "sout")
+        # self.robot.add_trace("imp_ctrl_fff", "sout")
+        # self.robot.add_trace("imp_ctrl_abs_end_eff_pos", "sout")
+        # self.robot.add_trace("imp_ctrl_abs_end_eff_vel", "sout")
+        # self.robot.add_trace("fff_slice_FR", "sout")
+        # self.robot.add_trace("fff_slice_FL", "sout")
         # self.robot.add_trace('kd_' + leg_name, "sout")
