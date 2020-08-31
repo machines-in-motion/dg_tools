@@ -106,6 +106,8 @@ namespace dynamicgraph{
         SignalTimeDependent<dg::Vector, int> wbcontrolSOUT; //whole body control
         // for balancing on a planck
         SignalTimeDependent<dg::Vector, int> descomposSOUT;
+        SignalTimeDependent<dg::Vector, int> DcmSOUT;
+        SignalTimeDependent<dg::Vector, int> DesDcmSOUT;
 
 
       protected:
@@ -121,6 +123,8 @@ namespace dynamicgraph{
         dg::Vector& return_end_eff_lqr_tau( dg::Vector& end_eff_lqr_tau, int t);
         dg::Vector& compute_end_eff_forces( dg::Vector & end_forces, int t);
         dg::Vector& compute_des_com_pos( dg::Vector & des_com_pos, int t);
+        dg::Vector& get_dcm( dg::Vector & dcm, int t);
+        dg::Vector& get_des_dcm( dg::Vector & des_dcm, int t);
 
 
         dg::Vector pos_error;
@@ -174,6 +178,11 @@ namespace dynamicgraph{
         int safetyswitch;
         int t_start;
         int bias_time;
+        double double_support_time_ = 0.001;
+        double time_from_double_support_started_ = 0.0;
+        int was_left_leg_stance_ = false;
+        bool is_stepper_running_ = false;
+        Eigen::Vector3d dcm_, des_dcm_, last_vcom_, last_com_;
 
       };
   } //namespace sot

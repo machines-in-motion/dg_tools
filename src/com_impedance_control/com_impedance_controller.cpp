@@ -60,7 +60,8 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
 
   ,controlSOUT( boost::bind(&ComImpedanceControl::return_control_torques, this, _1,_2),
                 KpSIN << KdSIN << positionSIN << desiredpositionSIN <<
-                velocitySIN << desiredvelocitySIN << feedforwardforceSIN ,
+                velocitySIN << desiredvelocitySIN << feedforwardforceSIN <<
+                positionSIN << biasedpositionSIN << biasedvelocitySIN,
                 "ComImpedanceControl("+name+")::output(vector)::tau")
   ,angcontrolSOUT( boost::bind(&ComImpedanceControl::return_angcontrol_torques, this, _1,_2),
                   KpSIN << KdSIN << inertiaSIN <<angvelSIN << desiredangvelSIN
@@ -85,6 +86,10 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
   ,descomposSOUT( boost::bind(&ComImpedanceControl::compute_des_com_pos, this, _1, _2),
                       leglengthflSIN << leglengthhlSIN,
                     "ComImpedanceControl("+name+")::output(vector)::compute_des_com_pos")
+  ,DcmSOUT( boost::bind(&ComImpedanceControl::get_dcm, this, _1,_2),
+            biasedpositionSIN << biasedvelocitySIN, "ComImpedanceControl("+name+")::output(vector)::dcm")
+  ,DesDcmSOUT( boost::bind(&ComImpedanceControl::get_des_dcm, this, _1,_2),
+               controlSOUT , "ComImpedanceControl("+name+")::output(vector)::des_dcm")
 
 
   ,isbiasset(0)
@@ -101,9 +106,30 @@ ComImpedanceControl::ComImpedanceControl(const std::string & name)
     oriSIN << desoriSIN << angvelSIN << desiredangvelSIN << endefflqrcontrolSOUT
     << feedforwardtorquesSIN << thrcntvalueSIN << absendeffposSIN << absendeffvelSIN
     << angcontrolSOUT << lqrerrorSIN << lqrgainSIN << lqrcontrolSOUT << lctrlSIN
-    << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN <<
-    wbcontrolSOUT << leglengthflSIN << leglengthhlSIN << descomposSOUT
+    << actrlSIN << hessSIN << g0SIN << ceSIN << ciSIN << ci0SIN << regSIN
+    << wbcontrolSOUT << leglengthflSIN << leglengthhlSIN << descomposSOUT
+    << DcmSOUT << DesDcmSOUT
+
   );
+}
+
+dynamicgraph::Vector& ComImpedanceControl::
+  get_dcm( dynamicgraph::Vector &dcm, int t){
+    const dynamicgraph::Vector& com = biasedpositionSIN(t);
+    const dynamicgraph::Vector& vcom = biasedvelocitySIN(t);
+    double omega = sqrt(9.81 / (0.25487417 - 0.004));//(0.28795507 - 0.02));
+    dcm = com + vcom / omega;
+//    std::cout << "Lhum #####" << dcm << std::endl;
+    return dcm;
+}
+
+dynamicgraph::Vector& ComImpedanceControl::
+get_des_dcm( dynamicgraph::Vector &des_dcm, int t){
+    des_dcm = des_dcm_;
+    des_dcm << (des_dcm_(0) - last_com_(0)) * (time_from_double_support_started_ + 0.001) / double_support_time_ + last_com_[0],
+            (des_dcm_(1) - last_com_(1)) * (time_from_double_support_started_ + 0.001) / double_support_time_ + last_com_[1], 0;
+//    std::cout << "Lhum !!!!!" << des_dcm << std::endl;
+    return des_dcm;
 }
 
 dynamicgraph::Vector& ComImpedanceControl::
@@ -210,8 +236,6 @@ dynamicgraph::Vector& ComImpedanceControl::
         const dynamicgraph::Vector& omega = angvelSIN(t);
         const dynamicgraph::Vector& des_omega = desiredangvelSIN(t);
         const dynamicgraph::Vector& hd_des = feedforwardtorquesSIN(t);
-        std::cout << "LhumLqr ori " << ori.array();
-        std::cout << "LhumLqr desori " << des_ori.array();
 
         if (isbiasset){
           /*----- assertions of sizes -------------*/
@@ -239,9 +263,7 @@ dynamicgraph::Vector& ComImpedanceControl::
           ori_se3 = ori_quat.toRotationMatrix();
 
           ori_error_se3 = des_ori_se3.transpose() * ori_se3;
-          std::cout << "LhumOri e " << ori_error_se3 << std::endl;
           ori_error_quat = ori_error_se3;
-          std::cout << "LhumOri q " << ori_error_quat.vec() << "  " << ori_error_quat.w() << std::endl;
 
           //todo: multiply as matrix
 
@@ -251,18 +273,9 @@ dynamicgraph::Vector& ComImpedanceControl::
           ori_error[2] = -2.0*((ori_error_quat.w()*ori_error_quat.vec()[2] * Kp_ang[2]) + (Kp_ang[1] - Kp_ang[0])*(ori_error_quat.vec()[1]*ori_error_quat.vec()[0]));
 
           /*---------- computing ang error ----*/
-          std::cout << "LhumForiE " << ori_error_quat.vec() << "          " << ori_error_quat.w() << std::endl;
-          std::cout << "LhumForiE " << ori_error.array() << std::endl;
-          h_error.array() = (des_omega.array() - omega.array());//Lhum inertia.array()*
-          std::cout << "Lhumangtau h " << h_error.array() << std::endl;
+          h_error.array() = (omega.array() - des_omega.array());//Lhum inertia.array()*
 
-          angtau.array() = hd_des.array() + ori_error.array();//Lhum + Kd_ang.array() * h_error.array();
-          std::cout << "Lhum  " << hd_des << "  !  " << Kd_ang << "   @   " << h_error << "   #   " << ori_error << std::endl;
-
-          std::cout << "Lhum2 " << Kp_ang << std::endl;
-          std::cout << "Lhum2 " << (ori_error_quat.w()*ori_error_quat.vec()[0] * Kp_ang[0]) << " % "
-                                << (ori_error_quat.w()*ori_error_quat.vec()[1] * Kp_ang[1]) << " ^ "
-                                << (ori_error_quat.w()*ori_error_quat.vec()[2] * Kp_ang[2]) << " & " << std::endl;
+          angtau.array() = hd_des.array() + Kd_ang.array() * h_error.array() + ori_error.array();
 
         }
 
@@ -274,7 +287,6 @@ dynamicgraph::Vector& ComImpedanceControl::
         // if (h_error[])
 
         // cout << ang_tau[1] << endl;
-        std::cout << "Lhumangtau " << angtau.array() << std::endl;
 
         sotDEBUGOUT(15);
         return angtau;
@@ -293,6 +305,7 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     const dynamicgraph::Vector& lqr_vector = lqrgainSIN(t);
     const dynamicgraph::Vector& position = biasedpositionSIN(t);
+    const dynamicgraph::Vector& pos = positionSIN(t);
     const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
     const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
     const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
@@ -308,7 +321,7 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     /*------- computing delta X -----------------------------*/
     delta_x.resize(13);
-    lqr_pos_error.array() = position.array() - des_pos.array();
+    lqr_pos_error.array() = pos.array() - des_pos.array();
     lqr_vel_error.array() = velocity.array() - des_vel.array();
     lqr_ori_error.array() = ori.array() - des_ori.array();
     lqr_ang_vel_error.array() = omega.array() - des_omega.array();
@@ -334,7 +347,6 @@ dynamicgraph::Vector& ComImpedanceControl::
     K.row(10) = lqr_vector.segment(130,13),
     K.row(11) = lqr_vector.segment(143,13);
 
-    cout << K << "\n" <<endl;
 
     /**** computing the centroidal forces at current timestep ----*/
     // F = F* - K*delta_x
@@ -351,33 +363,82 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& Kp = KpSIN(t);
     const dynamicgraph::Vector& Kd = KdSIN(t);
     const dynamicgraph::Vector& position = biasedpositionSIN(t);
-    const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
     const dynamicgraph::Vector& velocity = biasedvelocitySIN(t);
+    const dynamicgraph::Vector& pos = positionSIN(t);
+    const dynamicgraph::Vector& vel = velocitySIN(t);
+    const dynamicgraph::Vector& des_pos = desiredpositionSIN(t);
     const dynamicgraph::Vector& des_vel = desiredvelocitySIN(t);
     const dynamicgraph::Vector& des_fff = feedforwardforceSIN(t);
     const dynamicgraph::Vector& mass = massSIN(t);
-    std::cout << "LhumLqr position " << position.array();
-    std::cout << "LhumLqr desposition " << des_pos.array();
 
     /*----- assertions of sizes -------------*/
-    assert(Kp.size() == 3);
-    assert(Kd.size() == 3);
-    assert(position.size() == 3);
-    assert(des_pos.size() == 3);
-    assert(velocity.size() == 3);
-    assert(des_vel.size() == 3);
-    assert(des_fff.size() == 3);
+    int dimension = 3;
+    assert(Kp.size() == dimension);
+    assert(Kd.size() == dimension);
+    assert(position.size() == dimension);
+    assert(des_pos.size() == dimension);
+    assert(velocity.size() == dimension);
+    assert(des_vel.size() == dimension);
+    assert(des_fff.size() == dimension);
 
     // cout << "isbiasset" << isbiasset << endl;
     if (isbiasset){
       if(!safetyswitch){
+        const dynamicgraph::Vector &abs_end_eff_pos = absendeffposSIN(t);
+
+        int contact_switcher = was_left_leg_stance_ ? 2.0 : 1.0;//Lhum TODO pass these data from DG
+        double t_nom = 0.25 - 0.01;//t_upper_bound - 0.01;
+        double omega = sqrt(9.81 / (0.25487417 - 0.004));//(0.28795507 - 0.02));//
+        double tau_nom = exp(omega * t_nom);//exp(sqrt(9.81 / ht - hip_com_offset) * t_nom);
+        double bx_nom_ = 0. * t_nom / (tau_nom - 1);//v_des_local(0) * t_nom / (tau_nom - 1);
+        double by_nom_ = (pow(-1, contact_switcher) * (0.1235 * 1 / (1 + tau_nom))) -//(pow(-1, contact_switcher) * (l_p_ / (1 + tau_nom))) -
+                         0. * t_nom / (1 - tau_nom);//v_des_local(1) * t_nom / (1 - tau_nom);
+        if(time_from_double_support_started_ == 0 && absendeffposSIN.isPlugged()){
+            dcm_ = position + velocity / omega;
+            last_com_ = position.array();
+
+//            if(is_stepper_running_)
+            des_dcm_ << abs_end_eff_pos(dimension * ((was_left_leg_stance_) % 2)) + position(0) + bx_nom_,
+                        abs_end_eff_pos(dimension * ((was_left_leg_stance_) % 2) + 1) + position(1) + by_nom_,
+                        abs_end_eff_pos(dimension * ((was_left_leg_stance_) % 2) + 2) + position(2);
+//            else
+//                des_dcm_ << (abs_end_eff_pos(0) + abs_end_eff_pos(3)) / 2 + position(0),
+//                            (abs_end_eff_pos(1) + abs_end_eff_pos(4)) / 2 + position(1),
+//                            (abs_end_eff_pos(2) + abs_end_eff_pos(5)) / 2 + position(2);
+            last_vcom_ = velocity.array();
+
+        }
+//        std::cout << "dcm\n" << pos + vel / omega << "\n_____\ndes_dcm_\n" << des_dcm_ << std::endl << std::endl;
+
         /*---------- computing position error ----*/
+        Eigen::Vector3d new_des_pos;
+        Eigen::Vector3d new_des_vel;
+//          new_des << (abs_end_eff_pos(0) + abs_end_eff_pos(3)) / 2 + position(0),
+//                  (abs_end_eff_pos(1) + abs_end_eff_pos(4)) / 2 + position(1),
+        new_des_pos << (des_dcm_(0) - last_com_(0)) * (time_from_double_support_started_ + 0.001) / double_support_time_ + last_com_(0),
+                       (des_dcm_(1) - last_com_(1)) * (time_from_double_support_started_ + 0.001) / double_support_time_ + last_com_(1),
+                       des_pos(2);
+        new_des_vel << (des_vel(0) - last_vcom_(0)) * (time_from_double_support_started_ + 0.001) / double_support_time_,
+                       (des_vel(1) - last_vcom_(1)) * (time_from_double_support_started_ + 0.001) / double_support_time_,
+                       des_vel(2);
         pos_error.array() = des_pos.array() - position.array();
         vel_error.array() = des_vel.array() - velocity.array();
-        /*---------- computing tourques ----*/
+//        pos_error.array() = new_des_pos.array() - position.array();
+//        vel_error.array() = new_des_vel.array() - velocity.array();///!!!!!!!!!!!!!!!!!!!!!!!
 
+        /*---------- computing tourques ----*/
         tau.array() = des_fff.array() + (pos_error.array()*Kp.array()
                       + vel_error.array()*Kd.array());//Lhum mass.array()*
+//        std::cout << "new_des" << new_des << std::endl;
+//        std::cout << "position" << position << std::endl;
+//        std::cout << "abs_end_eff_pos" << abs_end_eff_pos(0) + position(0) << " " <<
+//                                          abs_end_eff_pos(1) + position(1) << " " <<
+//                                          abs_end_eff_pos(2) + position(2) << " " <<
+//                                          abs_end_eff_pos(3) + position(0) << " " <<
+//                                          abs_end_eff_pos(4) + position(1) << " " <<
+//                                          abs_end_eff_pos(5) + position(2) << std::endl;
+//        tau[0] = Kp[0] * (des_dcm_[0] - dcm_[0]) * (time_from_double_support_started_ + 0.001) / double_support_time_;
+//        tau[1] = Kp[1] * (des_dcm_[1] - dcm_[1]) * (time_from_double_support_started_ + 0.001) / double_support_time_;
       }
 
     }
@@ -386,6 +447,7 @@ dynamicgraph::Vector& ComImpedanceControl::
 
       tau.array() = des_pos.array() - des_pos.array();
     }
+
 
     sotDEBUGOUT(15);
 
@@ -411,12 +473,12 @@ dynamicgraph::Vector& ComImpedanceControl::
     const dynamicgraph::Vector& thrcntvalue = thrcntvalueSIN(t);
 
     const dynamicgraph::Vector& abs_end_eff_vel = absendeffvelSIN(t);
-    std::cout << "L " << lctrl << "A " << actrl << std::endl;
 
     end_forces.resize(g0.size());
     int dimension = 3;
     int number_of_legs = (g0.size() / dimension - 2) / 2;//number_of_legs * dimension + 2 * dimension +
                                                            //number_of_legs * dimension
+
     assert(thrcntvalue.size() == number_of_legs);
     int number_of_columns = number_of_legs * dimension + 2 * dimension + number_of_legs * dimension;
     int number_of_identity_columns = 2 * dimension + number_of_legs * dimension;
@@ -436,30 +498,79 @@ dynamicgraph::Vector& ComImpedanceControl::
         ci_new = ci;
 
         /******* setting up the QP *************************/
-
         ce0[0] = lctrl[0];
         ce0[1] = lctrl[1];
         ce0[2] = lctrl[2];
         ce0[3] = actrl[0];
         ce0[4] = actrl[1];
         ce0[5] = actrl[2];
+        ce0[6] = 0.;
+        ce0[7] = 0.;
+        ce0[8] = 0.;
+        ce0[9] = 0.;
 
+        if(number_of_legs == 2){
+          if(!is_stepper_running_ && (thrcntvalue[0] < 0.2 || thrcntvalue[1] < 0.2))
+              is_stepper_running_ = true;
+          if(thrcntvalue[0] < 0.2 && thrcntvalue[1] > 0.2){
+              was_left_leg_stance_ = 0;
+          }
+          else if(thrcntvalue[0] > 0.2 && thrcntvalue[1] < 0.2){
+              was_left_leg_stance_ = 1;
+          }
+//          if(thrcntvalue[0] < 0.2 || thrcntvalue[1] < 0.2) {
+//              hess_new(11, 11) = 1.;
+//              ce0[5] = 0;
+//          }
+          if(is_stepper_running_ && thrcntvalue[0] > 0.2 && thrcntvalue[1] > 0.2) {
+              time_from_double_support_started_ += 0.001;//control_period
+//              if(time_from_double_support_started_ < double_support_time_ / 4.) {
+////                  hess_new(6, 6) = hess_new(6, 6) * (time_from_double_support_started_) / (double_support_time_ / 4);
+////                  hess_new(7, 7) = hess_new(7, 7) * (time_from_double_support_started_) / (double_support_time_ / 4);
+//                  hess_new(11, 11) = hess_new(11, 11) * (time_from_double_support_started_) / (double_support_time_ / 4);
+//              }
+//              else if(time_from_double_support_started_ > 3 * double_support_time_ / 4.) {
+//                  hess_new(6, 6) = hess_new(6, 6) * (1 - (time_from_double_support_started_ -  3 * double_support_time_ / 4) / (double_support_time_ / 4));
+//                  hess_new(7, 7) = hess_new(7, 7) * (1 - (time_from_double_support_started_ -  3 * double_support_time_ / 4) / (double_support_time_ / 4));
+//                  hess_new(11, 11) = hess_new(11, 11) * (1 - (time_from_double_support_started_ -  3 * double_support_time_ / 4) / (double_support_time_ / 4));
+//              }
+          }
+          else {
+              time_from_double_support_started_ = 0;
+              hess_new(6, 6) = 1.;
+              hess_new(7, 7) = 1.;
+//              ce0[0] = 0;
+//              ce0[1] = 0;
+          }
+
+        }
+//        std::cout << ce0[0] << " " << ce0[1] << " " << ce0[2] << " " << hess_new(6, 6) << std::endl;
         // updating ce_new based on the desired absolute end effector velocity
         if (absendeffposSIN.isPlugged()) {
           const dynamicgraph::Vector& abs_end_eff_pos = absendeffposSIN(t);
           for (int i = 0; i < number_of_legs; i++) {
-            double x = abs_end_eff_pos(3 * i);
-            double y = abs_end_eff_pos(3 * i + 1);
-            double z = abs_end_eff_pos(3 * i + 2); // 0; // Always assumed to be on the floor.
-            std::cout << "Lhumz " << i << " " << x << " " << y << " " << z << std::endl;
-            ce_new.block<3, 3>(3, 3 * i) << 0, -z,  y,
+            double x = abs_end_eff_pos(dimension * i);
+            double y = abs_end_eff_pos(dimension * i + 1);
+            double z = abs_end_eff_pos(dimension * i + 2); // 0; // Always assumed to be on the floor.
+            ce_new.block<3, 3>(3, dimension * i) << 0, -z,  y,
                                             z,  0, -x,
                                            -y,  x,  0;
           }
         }
 
-        for (int i=0; i < number_of_legs * dimension; i++){
-            ce_new(i + 2 * dimension,i) = abs_end_eff_vel(i);
+        if(time_from_double_support_started_ > 0) {
+          double l, r;
+          if(was_left_leg_stance_ == 0){
+              r = time_from_double_support_started_ / double_support_time_;
+              l = 1 - (time_from_double_support_started_ / double_support_time_);
+          }
+          else{
+              r = 1 - (time_from_double_support_started_ / double_support_time_);
+              l = time_from_double_support_started_ / double_support_time_;
+          }
+          ce_new.block<3, 6>(dimension * (number_of_legs), 0) << l, 0, 0, -r,  0,  0,
+                                                                 0, l, 0,  0, -r,  0,
+                                                                 0, 0, l,  0,  0, -r;
         }
 
 
@@ -480,38 +591,20 @@ dynamicgraph::Vector& ComImpedanceControl::
             ce_new.col(2 + dimension * i).setZero();
           }
           else{
-            std::cout << "Lhum ";
-            std::cout << i << endl;
             ci_new(condition_number*i + 0, 3 * i + 0) = 1;
-            std::cout << i << endl;
             ci_new(condition_number*i + 0, 3 * i + 2) = -mu;
-            std::cout << i << endl;
             ci_new(condition_number*i + 1, 3 * i + 0) = -1;
-            std::cout << i << endl;
             ci_new(condition_number*i + 1, 3 * i + 2) = -mu;
-            std::cout << i << endl;
             ci_new(condition_number*i + 2, 3 * i + 1) = 1;
-            std::cout << i << endl;
             ci_new(condition_number*i + 2, 3 * i + 2) = -mu;
-            std::cout << i << endl;
             ci_new(condition_number*i + 3, 3 * i + 1) = -1;
-            std::cout << i << endl;
             ci_new(condition_number*i + 3, 3 * i + 2) = -mu;
-            std::cout << i << endl;
             ci_new(condition_number*i + 4, 3 * i + 2) = -1;
-            std::cout << i << endl;
          }
 
 
         // regularizing hessian
         hess_new += reg;
-//        cout << "hess5" << hess_new << std::endl;
-//        cout << "hess_new: \n" << hess_new << std::endl;
-//        cout << "g0: \n" << g0 << std::endl;
-//        cout << "ce_new: \n" << ce_new << std::endl;
-//        cout << "ce0: \n" << ce0 << std::endl;
-//        cout << "ci_new: \n" << ci_new << std::endl;
-//        cout << "ci0: \n" << ci0 << std::endl;
         qp.solve(hess_new, g0, ce_new, ce0, ci_new, ci0);
         end_forces = qp.result();
 
@@ -523,11 +616,10 @@ dynamicgraph::Vector& ComImpedanceControl::
     }
 
     else {
-      // cout << "not set" << endl;
       end_forces.setZero();
     }
+//    std::cout << ce0 << " ! " << end_forces << std::endl;
 
-     cout << "end_forces " << end_forces.array() << endl;
     return end_forces;
 
   }
@@ -555,7 +647,6 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     des_com_pos[0] = 0.1*atan(diff[2]/diff[0]);
 
-    // cout << des_com_pos[0] << endl;
 
     sotDEBUGOUT(15);
     return des_com_pos;

@@ -46,7 +46,7 @@ class BoltComController(QuadrupedComControl):
 
         base_position_rpy = basePoseQuat2PoseRPY(
             self.get_biased_base_position(),
-            'base_position_rpy')#Lhum rpy
+            'base_position_rpy')
 
         self.robot_position = stack_two_vectors(
             base_position_rpy,#Lhum rpy
@@ -64,7 +64,6 @@ class BoltComController(QuadrupedComControl):
         self.robot_vcom = multiply_mat_vec(
             self.robot_dg.Jcom, self.robot_velocity, self.EntityName + '_pin_vcom')
 
-        print("Lhum ^^^^^^^^^^^^")
         dg.plug(self.robot_com, self.com_imp_ctrl.biased_pos)
         dg.plug(self.robot_vcom, self.com_imp_ctrl.biased_vel)
 
