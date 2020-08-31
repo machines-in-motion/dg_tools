@@ -307,7 +307,14 @@ class QuadrupedComControl(object):
         Returns:
             Signal<dg::vector> of size 1
         """
-        return self.base_orientation
+
+        pose_rpy = basePoseQuat2PoseRPY(
+            self._biased_base_position,
+            'base_rpy')
+
+        rpy = selec_vector(pose_rpy, 3, 6, "rpy")
+
+        return pose_rpy
 
     def get_biased_base_velocity(self):
         """
@@ -558,26 +565,26 @@ class QuadrupedComControl(object):
         self.get_biased_base_position()
         self.get_biased_base_velocity()
 
-        self.robot.add_trace(self.com_imp_ctrl.name, "des_pos")
-        self.robot.add_trace(self.com_imp_ctrl.name, "des_vel")
+        # self.robot.add_trace(self.com_imp_ctrl.name, "des_pos")
+        # self.robot.add_trace(self.com_imp_ctrl.name, "des_vel")
 
         self.robot.add_trace('QuadrupedComControl_vicon_position', 'sout')
-        self.robot.add_trace('QuadrupedComControl_vicon_velocity', 'sout')
-
-        self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
-        self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
-
-        self.robot.add_trace(self.EntityName + 'forces_fl', 'sout')
-        self.robot.add_trace(self.EntityName + 'forces_fr', 'sout')
-
-        self.robot.add_trace(self.EntityName, "tau")
+        # self.robot.add_trace('QuadrupedComControl_vicon_velocity', 'sout')
+        #
+        # self.robot.add_trace(self.EntityName + '_biased_base_pos', 'sout')
+        # self.robot.add_trace(self.EntityName + '_biased_base_vel', 'sout')
+        #
+        # self.robot.add_trace(self.EntityName + 'forces_fl', 'sout')
+        # self.robot.add_trace(self.EntityName + 'forces_fr', 'sout')
+        #
+        # self.robot.add_trace(self.EntityName, "tau")
         # self.robot.add_ros_and_trace(self.EntityName, "tau")
         # #
-        self.robot.add_trace(self.EntityName, "angtau")
+        # self.robot.add_trace(self.EntityName, "angtau")
         # self.robot.add_ros_and_trace(self.EntityName, "angtau")
         # #
         #
-        self.robot.add_trace(self.EntityName, "wbctrl")
+        # self.robot.add_trace(self.EntityName, "wbctrl")
         # self.robot.add_ros_and_trace(self.EntityName, "wbctrl")
 
         # self.robot.add_trace(self.EntityName, "lqrtau")
@@ -586,7 +593,7 @@ class QuadrupedComControl(object):
         # self.robot.add_trace(self.EntityName, "thr_cnt_sensor")
         # self.robot.add_ros_and_trace(self.EntityName, "thr_cnt_sensor")
         #
-        self.robot.add_trace("com_forces", "sout")
+        # self.robot.add_trace("com_forces", "sout")
         # self.robot.add_ros_and_trace("com_torques", "sout")
 
         # self.robot.add_trace(self.EntityName, "end_eff_lqr_tau")
@@ -595,11 +602,11 @@ class QuadrupedComControl(object):
         # self.robot.add_trace("lqr_end_eff_force", "sout")
         # self.robot.add_ros_and_trace("lqr_end_eff_force", "sout")
 
-        self.robot.add_trace("biased_pos", "sout")
+        # self.robot.add_trace("biased_pos", "sout")
         # self.robot.add_ros_and_trace("biased_pos", "sout")
 
         #
-        self.robot.add_trace("biased_vel", "sout")
+        # self.robot.add_trace("biased_vel", "sout")
         # self.robot.add_ros_and_trace("biased_vel", "sout")
         # #
         # self.robot.add_trace("quad_com_ctrl", "lqrtau")
