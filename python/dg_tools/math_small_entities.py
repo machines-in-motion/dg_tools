@@ -12,7 +12,6 @@ impedance_controller
 # Imports
 #
 from dynamic_graph import plug
-from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.math_small_entities import (
     VectorConstant,
     MatrixConstant,
