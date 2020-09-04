@@ -25,7 +25,6 @@ from dynamic_graph_manager.dg_tools import (
 )
 
 from dynamic_graph import plug
-from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.operator import *
 from dynamic_graph.sot.core.math_small_entities import *
 from dynamic_graph.sot.core.vector_constant import VectorConstant
