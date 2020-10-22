@@ -12,7 +12,7 @@ impedance_controller
 # Imports
 #
 from dynamic_graph import plug
-from dynamic_graph.sot.core import Selec_of_vector
+# from dynamic_graph.sot.core import Selec_of_vector
 from dynamic_graph.sot.core.math_small_entities import (
     VectorConstant,
     MatrixConstant,
@@ -28,6 +28,7 @@ from dynamic_graph.sot.core.math_small_entities import (
     Selec_of_vector,
     Stack_of_vector,
     Multiply_of_double,
+    Selec_of_vector,
 )
 # from dynamic_graph.sot.core.op_point_modifier import OpPointModifier
 # from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double

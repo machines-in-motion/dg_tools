@@ -178,7 +178,7 @@ namespace dynamicgraph{
         int safetyswitch;
         int t_start;
         int bias_time;
-        double double_support_time_ = 0.001;
+        double double_support_time_ = 0.01;
         double time_from_double_support_started_ = 0.0;
         int was_left_leg_stance_ = false;
         bool is_stepper_running_ = false;

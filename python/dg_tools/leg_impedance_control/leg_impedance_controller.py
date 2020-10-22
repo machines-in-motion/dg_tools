@@ -14,7 +14,7 @@ from dg_tools.utils import *
 from dg_tools.traj_generators import mul_double_vec_2
 
 from py_robot_properties_teststand.config import TeststandConfig
-import dynamic_graph.sot.dynamics_pinocchio as dp
+import dynamic_graph.sot.dynamic_pinocchio as dp
 from dynamic_graph.sot.core.switch import SwitchVector
 
 
@@ -32,6 +32,7 @@ class LegImpedanceController():
             'jac_cnt_' + self.leg_name, 'contact')
         self.robot_dg.createPosition('pos_hip_' + self.leg_name, 'HFE')
         self.robot_dg.createPosition('pos_foot_' + self.leg_name, 'END')
+
 
         print("Warning: Robot acceleration has been set to zero")
         self.robot_dg.acceleration.value = 3 * (0.0, )
@@ -114,12 +115,12 @@ class LegImpedanceController():
         self.jacTI = Inverse_of_matrix("jacTI")
         plug(self.jacT, self.jacTI.sin)
 
-        c1 = constVector([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], "c1")
-        c2 = constVector([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], "c2")
-        c3 = constVector([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], "c3")
-        mc1 = multiply_mat_vec(self.jacT, c1, "mc1")
-        mc2 = multiply_mat_vec(self.jacT, c2, "mc2")
-        mc3 = multiply_mat_vec(self.jacT, c3, "mc3")
+        # c1 = constVector([1.0, 0.0, 0.0, 0.0, 0.0, 0.0], "c1")
+        # c2 = constVector([0.0, 1.0, 0.0, 0.0, 0.0, 0.0], "c2")
+        # c3 = constVector([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], "c3")
+        # mc1 = multiply_mat_vec(self.jacT, c1, "mc1")
+        # mc2 = multiply_mat_vec(self.jacT, c2, "mc2")
+        # mc3 = multiply_mat_vec(self.jacT, c3, "mc3")
 
         self.final2 = multiply_mat_vec(self.jacTI.sout, self.friction2, "final2")
 

@@ -7,22 +7,23 @@
 """
 
 from robot_properties_bolt.config import BoltConfig
-import dynamic_graph.sot.dynamics_pinocchio as dp
 import dynamic_graph as dg
 from dg_tools.utils import *
 
+import dynamic_graph.sot.dynamic_pinocchio as dp
 from dg_tools.leg_impedance_control.quad_leg_impedance_controller import QuadrupedComControl
 
-import dynamic_graph.sot.dynamics_pinocchio as dp
 
 from dynamic_graph.sot.core.math_small_entities import (
-    Selec_of_matrix
+    Selec_of_matrix,
+    Multiply_of_matrix
 )
-from dg_tools.leg_impedance_control.leg_impedance_controller import LegImpedanceController
+# from dg_tools.leg_impedance_control.leg_impedance_controller import LegImpedanceController
 
 class BoltComController(QuadrupedComControl):
     def init_robot_properties(self):
         self.robot_vicon_name = "Bolt"
+        # print("mass" , BoltConfig.mass)
         self.robot_mass = 3 * [1]#[BoltConfig.mass]
 
         # TODO: Provide the new base inertia here.
@@ -72,8 +73,8 @@ class BoltComController(QuadrupedComControl):
 
         # robot.add_trace("base_position_rpy" , "sout")
         if self.robot_pin:
-            self.robot.add_trace(self.EntityName + '_pin_com', 'sout')
-            # self.robot.add_trace(self.EntityName + '_pin_vcom', 'sout')
+            a = 2
+        #     self.robot.add_trace(self.EntityName + '_pin_com', 'sout')
 
     def return_com_torques(self, *args, **kwargs):
         """
@@ -126,7 +127,7 @@ class BoltLegImpedanceController(object):
     def _compute_jacobian(self):
         """ Slice the jacobian to keep only the parts needed for this leg.
 
-        Returns: Jacobian at the endeffector, size 6 x 3 matrix.
+        Returns: Jacobian at the endeffector, size 3 x 3 matrix.
         """
         jac_sub = Selec_of_matrix('jac_cnt_' + self.leg_name)
         jac_sub.selecRows(0, 3)
@@ -134,26 +135,39 @@ class BoltLegImpedanceController(object):
         dg.plug(self.robot_dg.signal("jac_cnt_" + self.leg_name), jac_sub.sin)
         return jac_sub.sout
 
+    def _compute_jacobian_swing(self):
+        """ Slice the jacobian to keep only the parts needed for this leg.
+
+        Returns: Jacobian at the endeffector, size 3 x 12 matrix.
+        """
+        jac_sw = Selec_of_matrix('jac_sw_' + self.leg_name)
+        jac_sw.selecRows(0, 3)
+        jac_sw.selecCols(0, 12)
+        dg.plug(self.robot_dg.signal("jac_cnt_" + self.leg_name), jac_sw.sin)
+
+        return jac_sw.sout
+
     def _compute_control_torques(self):
         """
         Computes torques tau = JacT*(errors).
         """
         self.jacT = transpose_mat(self.jac, "jacTranspose" + self.leg_name)
         # multiplying negative
+
         errors = mul_double_vec(-1.0, self.total_error,
                                 "neg_op_" + self.leg_name)
         control_torques = multiply_mat_vec(
             self.jacT, errors, "compute_control_torques_" + self.leg_name)
 
-        c1 = constVector([1.0, 0.0, 0.0], "c1")
-        c2 = constVector([0.0, 1.0, 0.0], "c2")
-        c3 = constVector([0.0, 0.0, 1.0], "c3")
-        mc1 = multiply_mat_vec(self.jac, c1, "mc1" + self.leg_name)
-        mc2 = multiply_mat_vec(self.jac, c2, "mc2" + self.leg_name)
-        mc3 = multiply_mat_vec(self.jac, c3, "mc3" + self.leg_name)
+        # c1 = constVector([1.0, 0.0, 0.0], "c1")
+        # c2 = constVector([0.0, 1.0, 0.0], "c2")
+        # c3 = constVector([0.0, 0.0, 1.0], "c3")
+        # mc1 = multiply_mat_vec(self.jac, c1, "mc1" + self.leg_name)
+        # mc2 = multiply_mat_vec(self.jac, c2, "mc2" + self.leg_name)
+        # mc3 = multiply_mat_vec(self.jac, c3, "mc3" + self.leg_name)
         return control_torques
 
-    def compute_control_torques(self, kp, kd, kf, des_pos, des_vel, fff, pos_global=False):
+    def compute_control_torques(self, kp, kd, kf, des_pos, des_vel, fff_stance, fff_swing, pos_global=False):
         """
         Impedance controller implementation. Creates a virtual spring
         damper system the base and foot of the leg
@@ -176,7 +190,8 @@ class BoltLegImpedanceController(object):
         self.rct_args["kd"] = kd
         self.rct_args["des_vel"] = des_vel
         self.rct_args["kf"] = kf
-        self.rct_args["fff"] = fff
+        self.rct_args["fff_stance"] = fff_stance
+        self.rct_args["fff_swing"] = fff_swing
         self.rct_args["pos_global"] = pos_global
 
         self.jac = self._compute_jacobian()
@@ -222,12 +237,48 @@ class BoltLegImpedanceController(object):
         Computes torques tau = JacT*(errors).
         """
 
-        if kf is not None and fff is not None:
+        if kf is not None and fff_stance is not None:
             print("fff is plugged ....")
+
+            # self.fff_swing_vec = selec_vector(fff_swing, 0, 3, 'fff_swing' + self.leg_name)
+            self.fff_swing = mul_double_vec(-1.0, fff_swing,
+                                            "fff_swing" + self.leg_name)
+            # self.fff_swing_R_vec = selec_vector(fff_swing, 3, 6, 'fff_swing_R' + self.leg_name)
+            # self.fff_swing_R = selec_vector(fff_swing, 3, 6, 'fff_swing_R' + self.leg_name)
+
+            self.jac_sw = self._compute_jacobian_swing()
+            self.jac_sw_T = transpose_mat(self.jac_sw, "jac_sw_Transpose" + self.leg_name)
+            self.inertai_inv = Inverse_of_matrix("inv(inertia)_" + self.leg_name)
+            dg.plug(self.robot_dg.inertia, self.inertai_inv.sin)
+            self.JM = Multiply_of_matrix("J*M_" + self.leg_name)
+            dg.plug(self.jac_sw, self.JM.sin0)
+            dg.plug(self.inertai_inv.sout, self.JM.sin1)
+            self.MassMatrix_inv = Multiply_of_matrix("inv(MassMatrix)_" + self.leg_name)
+            dg.plug(self.JM.sout, self.MassMatrix_inv.sin0)
+            dg.plug(self.jac_sw_T, self.MassMatrix_inv.sin1)
+            self.MassMatrix = Inverse_of_matrix("MassMatrix_" + self.leg_name)
+            dg.plug(self.MassMatrix_inv.sout, self.MassMatrix.sin)
+            self.invM = MatrixConstant("constant_inv(m)_" + self.leg_name)
+            self.invM.resize(3, 3)
+            self.invM.set([[22.222, 0., 0.,], [0., 22.2220, 0.,], [0., 0., 11.111,]])
+            self.invM_MM = Multiply_of_matrix("inv(m)*MM" + self.leg_name)
+            dg.plug(self.invM.sout, self.invM_MM.sin0)
+            dg.plug(self.MassMatrix.sout, self.invM_MM.sin1)
+
+            self.F = multiply_mat_vec(self.invM_MM.sout, self.fff_swing, "F_" + self.leg_name)
+            # self.F_R = multiply_mat_vec(self.invM_MM.sout, self.fff_swing_R, "F_R_" + self.leg_name)
+            # dg.plug(self.invM_MM.sout, self.F_R.sin0)
+            # dg.plug(self.fff_swing_R, self.F_R.sin1)
+
+            # self.final_ff_swing = stack_two_vectors(self.F_L, self.F_R, 3, 3, "final_ff_swing" + self.leg_name)
+
             mul_kf_gains = Multiply_double_vector("Kf_" + self.leg_name)
             plug(kf, mul_kf_gains.sin1)
-            plug(fff, mul_kf_gains.sin2)
+            # plug(add_vec_vec(self.F, fff_stance, "stance_swing_ff" + self.leg_name), mul_kf_gains.sin2)#F_swing/m*M
+            plug(add_vec_vec(fff_stance, self.fff_swing, "stance_swing_ff" + self.leg_name), mul_kf_gains.sin2)#normal
+            # self.fff = subtract_vec_vec(self.com_forces, self.des_fff_eff)
             fff_with_gains = mul_kf_gains.sout
+
             self.total_error = add_vec_vec(
                 fff_with_gains, self.pd_error, "total_error_" + self.leg_name)
 
@@ -244,41 +295,51 @@ class BoltLegImpedanceController(object):
         return self.control_torques
 
     def record_data(self, robot):
-        robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
+        # robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
+        # robot.add_trace("J*M_" + self.leg_name, "sout")
+        # robot.add_trace('jac_sw_' + self.leg_name, "sout")
         # robot.add_trace("rel_pos_foot_" + self.leg_name, "sout")
 
-        # robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
-        # robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
+        robot.add_trace("rel_vel_foot_" + self.leg_name, "sout")
         #
         # robot.add_trace("pos_error_" + self.leg_name, "sout")
-        # robot.add_trace("pos_error_" + self.leg_name, "sout")
         #
-        # robot.add_trace("vel_error_" + self.leg_name, "sout")
         # robot.add_trace("vel_error_" + self.leg_name, "sout")
         #
         # robot.add_trace("est_f_" + self.leg_name, "sout")
         # robot.add_trace("est_f_" + self.leg_name, "sout")
         #
         # robot.add_trace("pd_error_" + self.leg_name, "sout")
-        # robot.add_trace("kp_split_" + self.leg_name, "sout")
+        robot.add_trace("kp_split_" + self.leg_name, "sout")
+        robot.add_trace("kd_split_" + self.leg_name, "sout")
+        # robot.add_trace(self.robot_dg.name, 'inertia')
         #
-        robot.add_trace("compute_control_torques_" + self.leg_name, "sout")
-        robot.add_trace("neg_op_" + self.leg_name, "sout")
-        robot.add_trace("Kf_" + self.leg_name, "sout")
+        # robot.add_trace("compute_control_torques_" + self.leg_name, "sout")
+        # robot.add_trace("neg_op_" + self.leg_name, "sout")
         # robot.add_trace(self.jacT.name, "sout")
         #
-        # if (self.rct_args["kf"] is not None and
-        #         self.rct_args["fff"] is not None):
-        #     robot.add_trace("total_error_" + self.leg_name, "sout")
-        #     robot.add_trace("total_error_" + self.leg_name, "sout")
+
+        if (self.rct_args["kf"] is not None and
+                self.rct_args["fff_swing"] is not None):
+            print("KFFFF")
+            # robot.add_trace("F_" + self.leg_name, "sout")
+            robot.add_trace("Kf_" + self.leg_name, "sout")
+        # #     # robot.add_trace("final_ff_swing" + self.leg_name, "sout")
+            robot.add_trace("total_error_" + self.leg_name, "sout")
+            # robot.add_trace("stance_swing_ff" + self.leg_name, "sout")
+            # robot.add_trace("inv(MassMatrix)_" + self.leg_name, "sout")
+            # robot.add_trace("MassMatrix_" + self.leg_name, "sout")
+            # robot.add_trace("inv(inertia)_" + self.leg_name, "sout")
+        #     # robot.add_trace('fff_swing_R' + self.leg_name, "sout")
+        #     # robot.add_trace('fff_swing' + self.leg_name, "sout")
 
         robot.add_trace("xyzpos_foot_" + self.leg_name, "sout")
-        # robot.add_ros_and_trace(robot.device.joint_positions, "sout")
+        # # robot.add_ros_and_trace(robot.device.joint_positions, "sout")
         robot.add_trace("xyzpos_hip_" + self.leg_name, "sout")
 
-        robot.add_trace("mc1" + self.leg_name, "sout")
-        robot.add_trace("mc2" + self.leg_name, "sout")
-        robot.add_trace("mc3" + self.leg_name, "sout")
+        # robot.add_trace("mc1" + self.leg_name, "sout")
+        # robot.add_trace("mc2" + self.leg_name, "sout")
+        # robot.add_trace("mc3" + self.leg_name, "sout")
 
 
 class BoltImpedanceController(object):
@@ -322,7 +383,7 @@ class BoltImpedanceController(object):
         else:
             return selec_vector(vec, 3 * leg_idx, 3 * leg_idx + 3, name)
 
-    def compute_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None,
+    def compute_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff_stance=None, fff_swing=None,
                                 base_position=None, base_velocity=None, pos_global=False):
         """ Computes the desired joint torques for desired configuration using impedance controller.
 
@@ -344,7 +405,8 @@ class BoltImpedanceController(object):
         # self.robot = robot
         self.des_pos = vectorIdentity(des_pos, self.number_of_legs * self.dimention, "imp_ctrl_des_pos")
         self.des_vel = vectorIdentity(des_vel, self.number_of_legs * self.dimention, "imp_ctrl_des_vel")
-        self.fff = vectorIdentity(fff, 2 * self.number_of_legs * self.dimention, "imp_ctrl_fff")
+        # self.fff_stance = vectorIdentity(fff_stance, 2 * self.number_of_legs * self.dimention, "imp_ctrl_fff_stance")
+        # self.fff_swing = vectorIdentity(fff_swing, 2 * self.number_of_legs * self.dimention, "imp_ctrl_fff_swing")
         self.joint_positions = self.robot.device.joint_positions
         self.joint_velocities = self.robot.device.joint_velocities
 
@@ -371,7 +433,8 @@ class BoltImpedanceController(object):
                 kf,
                 self._slice_vec(self.des_pos, leg_idx, 'des_pos_slice_' + leg_name),
                 self._slice_vec(self.des_vel, leg_idx, 'des_vel_slice_' + leg_name),
-                selec_vector(fff, 6 * leg_idx, 6 * leg_idx + 3, 'fff_slice_' + leg_name),
+                selec_vector(fff_stance, 6 * leg_idx, 6 * leg_idx + 3, 'fff_slice_stance_' + leg_name),
+                selec_vector(fff_swing, 6 * leg_idx, 6 * leg_idx + 3, 'fff_slice_swing_' + leg_name),
                 pos_global=pos_global)
 
         # Combine the computed torques from the impedance controllers into single torque vector.
