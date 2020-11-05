@@ -79,6 +79,14 @@ def constVector(val, entityName=''):
     op.value = list(val)
     return op
 
+def constVectorOp(val, entityName=''):
+    """Initializes a constant vector and returns the output signals as well as op.
+    """
+    op = Multiply_double_vector(entityName)
+    op.sin1.value = 1.
+    op.sin2.value = list(val)
+    return op.sin2, op.sout
+
 def vectorIdentity(vec1, vec_size, entityName):
     """Entity to label a vector signal."""
     add = Add_of_vector(entityName)
@@ -183,6 +191,10 @@ class VectorSignal(BaseOperatorSignal):
 
         super(VectorSignal, self).__init__(sig)
         self.length = length
+
+        self._mul = {
+            VectorSignal: opdef(Multiply_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length), use_sin1=False)
+        }
 
         self._add = {
             VectorSignal: opdef(Add_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length))
