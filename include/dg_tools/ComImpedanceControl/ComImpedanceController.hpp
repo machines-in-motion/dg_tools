@@ -23,6 +23,7 @@ namespace dg = dynamicgraph;
 
 // eigen-quadprog
 #include <eigen-quadprog/QuadProg.h>
+#include <eiquadprog/eiquadprog-rt.hpp>
 /* SOT */
 #include <dynamic-graph/signal-time-dependent.h>
 #include <dynamic-graph/signal-ptr.h>
@@ -143,7 +144,8 @@ namespace dynamicgraph{
 
 
 
-        Eigen::QuadProgDense qp;
+        // Eigen::QuadProgDense qp;
+        eiquadprog::solvers::RtEiquadprog<18, 6, 20> qp;
 
         Eigen::Quaternion<double> ori_quat;
         Eigen::Quaternion<double> des_ori_quat;

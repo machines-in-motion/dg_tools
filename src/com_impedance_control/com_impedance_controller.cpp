@@ -397,18 +397,18 @@ dynamicgraph::Vector& ComImpedanceControl::
 
     const dynamicgraph::Vector& abs_end_eff_vel = absendeffvelSIN(t);
 
-    end_forces.resize(30);
+    end_forces.resize(18);
     assert(thrcntvalue.size()==4);
 
     if(isbiasset){
       if(thrcntvalue.sum() > 0.5){
-        ce0.resize(18);
+        ce0.resize(6);
         ce0.setZero();
-        // cout << "started " << endl;
+
         assert(lctrl.size()==3);
         assert(actrl.size()==3);
-        assert(g0.size()== 30);
-        assert(ce0.size()==18);
+        assert(g0.size()== 18);
+        assert(ce0.size()==6);
 
 
         hess_new = hess;
@@ -416,8 +416,8 @@ dynamicgraph::Vector& ComImpedanceControl::
 
         /******* setting up the QP *************************/
 
-        ce0[0] = lctrl[0]; ce0[1] = lctrl[1]; ce0[2] = lctrl[2];
-        ce0[3] = actrl[0]; ce0[4] = actrl[1]; ce0[5] = actrl[2];
+        ce0[0] = -lctrl[0]; ce0[1] = -lctrl[1]; ce0[2] = -lctrl[2];
+        ce0[3] = -actrl[0]; ce0[4] = -actrl[1]; ce0[5] = -actrl[2];
 
         // updating ce_new based on the desired absolute end effector velocity
         if (absendeffposSIN.isPlugged()) {
@@ -432,15 +432,15 @@ dynamicgraph::Vector& ComImpedanceControl::
           }
         }
 
-        for (int i=0; i < 12; i ++){
-            ce_new(i+6,i) = abs_end_eff_vel(i);
-        }
+        // for (int i=0; i < 12; i ++){
+        //     ce_new(i+6,i) = abs_end_eff_vel(i);
+        // }
 
 
         /******** setting elements of matrix to zero when foot is not
         ********* on the ground ***********************************************/
 
-        qp.problem(30, 18, 18);
+        // qp.problem(18, 6, ci0.size());
 
         if(thrcntvalue[0] < 0.2){
           // setting the columns related to Fl to zero since it is not on the ground
@@ -498,9 +498,17 @@ dynamicgraph::Vector& ComImpedanceControl::
         // regularizing hessian
         hess_new += reg;
 
-        qp.solve(hess_new, g0, ce_new, ce0, ci, ci0);
-        end_forces = qp.result();
-
+        // qp.solve(hess_new, g0, ce_new, ce0, ci, ci0);
+        RtMatrixX<18, 18>::d rthess_new = hess_new;
+        RtVectorX<18>::d rtg0 = g0;
+        RtMatrixX<6, 18>::d rtce_new = ce_new;
+        RtVectorX<6>::d rtce0 = ce0;
+        RtMatrixX<20, 18>::d rtci = ci;
+        RtVectorX<20>::d rtci0 = ci0;
+        RtVectorX<18>::d sol;
+        eiquadprog::solvers::RtEiquadprog_status status = 
+            qp.solve_quadprog(rthess_new, rtg0, rtce_new, rtce0, rtci, rtci0, sol);
+        end_forces = sol;
       }
       else{
         // all legs are off the ground. Can not control the COM
