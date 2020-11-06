@@ -14,13 +14,11 @@ Differences between solo8 and solo12 code:
 """
 
 from robot_properties_solo.config import Solo12Config
-import dynamic_graph.sot.dynamics_pinocchio as dp
+import dynamic_graph.sot.dynamic_pinocchio as dp
 import dynamic_graph as dg
 from dg_tools.utils import *
 
 from dg_tools.leg_impedance_control.quad_leg_impedance_controller import QuadrupedComControl
-
-import dynamic_graph.sot.dynamics_pinocchio as dp
 
 from dynamic_graph.sot.core.math_small_entities import (
     Selec_of_matrix
