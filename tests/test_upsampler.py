@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from dynamic_graph_manager.dg_tools import Upsampler
+from dg_tools.dynamic_graph.dg_tools_entities  import Upsampler
 
 class TestUpsampler(unittest.TestCase):
     def test_init(self):

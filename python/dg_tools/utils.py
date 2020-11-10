@@ -18,7 +18,7 @@ import rospkg
 
 from numbers import Number
 
-from dynamic_graph_manager.dg_tools import (
+from dg_tools.dynamic_graph.dg_tools_entities  import (
     PoseQuaternionToPoseRPY,
     Division_of_double,
     Sinus as Sinus

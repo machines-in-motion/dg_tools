@@ -16,14 +16,14 @@
 /* --------------------------------------------------------------------- */
 
 /* Matrix */
-#include <dynamic-graph/linear-algebra.h>
-namespace dg = dynamicgraph;
+#include "dynamic-graph/linear-algebra.h"
 
 /* SOT */
-#include <dynamic-graph/signal-time-dependent.h>
-#include <dynamic-graph/signal-ptr.h>
-#include <dynamic-graph/entity.h>
+#include "dynamic-graph/signal-time-dependent.h"
+#include "dynamic-graph/signal-ptr.h"
+#include "dynamic-graph/entity.h"
 
+namespace dg = dynamicgraph;
 
 /* --------------------------------------------------------------------- */
 /* --- API ------------------------------------------------------------- */

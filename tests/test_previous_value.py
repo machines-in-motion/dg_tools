@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from dynamic_graph_manager.dg_tools import PreviousValue
+from dg_tools.dynamic_graph.dg_tools_entities  import PreviousValue
 
 class TestPreviousValue(unittest.TestCase):
     def test_basic(self):

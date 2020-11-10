@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from dynamic_graph_manager.dg_tools import VectorIntegrator
+from dg_tools.dynamic_graph.dg_tools_entities  import VectorIntegrator
 
 class TestVectorIntegrator(unittest.TestCase):
     def test_basic(self):
