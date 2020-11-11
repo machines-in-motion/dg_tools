@@ -10,7 +10,6 @@
 
 import numpy as np
 from dynamic_graph import plug
-from dynamic_graph.sot.core.math_small_entities import Multiply_of_double
 from dynamic_graph.sot.tools import Oscillator, CubicInterpolation
 from .math_small_entities import (
     ConstantVector,
@@ -23,6 +22,7 @@ from .math_small_entities import (
     mul_double_vec_2,
     scale_values,
     mul_doub_doub,
+    Multiply_of_double
 )
 
 ##########################################################
@@ -30,9 +30,9 @@ from .math_small_entities import (
 
 # For making gain input dynamic through terminal
 add_pi = Add_of_double('pi')
-add_pi.sin1.value = 0
+add_pi.sin(0).value = 0
 # Change this value for different gains
-add_pi.sin2.value = np.pi/2.0
+add_pi.sin(1).value = np.pi/2.0
 pi = add_pi.sout
 
 ###############################################################################
@@ -170,9 +170,9 @@ class CircularCartesianTrajectoryGenerator(object):
             self.__dict__['osc_vel_magnitude_' + dof] = Multiply_of_double(
                 self.prefix + 'osc_vel_magnitude_' + dof)
             plug(self.__dict__['osc_pos_' + dof].omega,
-                 self.__dict__['osc_vel_magnitude_' + dof].sin0)
+                 self.__dict__['osc_vel_magnitude_' + dof].sin(0))
             plug(self.__dict__['osc_pos_' + dof].magnitude,
-                 self.__dict__['osc_vel_magnitude_' + dof].sin1)
+                 self.__dict__['osc_vel_magnitude_' + dof].sin(1))
             plug(self.__dict__['osc_vel_magnitude_' + dof].sout,
                  self.__dict__['osc_vel_' + dof].magnitude)
             # omega
@@ -183,7 +183,7 @@ class CircularCartesianTrajectoryGenerator(object):
                 self.prefix + 'osc_vel_phase_' + dof)
             self.pi_by_2 = ConstantDouble(np.pi * 0.5, self.prefix + 'pi_by_2')
             plug(self.pi_by_2.sout,
-                 self.__dict__['osc_vel_phase_' + dof].sin1)
+                 self.__dict__['osc_vel_phase_' + dof].sin(1))
             plug(self.__dict__['osc_pos_' + dof].phase,
                  self.__dict__['osc_vel_phase_' + dof].sin2)
             plug(self.__dict__['osc_vel_phase_' + dof].sout,
@@ -205,14 +205,14 @@ class CircularCartesianTrajectoryGenerator(object):
             self.__dict__['des_pos_' + dof] = Multiply_double_vector(
                 self.prefix + 'des_pos_' + dof)
             plug(self.__dict__['osc_pos_' + dof].sout,
-                 self.__dict__['des_pos_' + dof].sin1)
+                 self.__dict__['des_pos_' + dof].sin(1))
             plug(self.__dict__['unit_vector_' + dof].sout,
                  self.__dict__['des_pos_' + dof].sin2)
             # velocity
             self.__dict__['des_vel_' + dof] = Multiply_double_vector(
                 self.prefix + 'des_vel_' + dof)
             plug(self.__dict__['osc_vel_' + dof].sout,
-                 self.__dict__['des_vel_' + dof].sin1)
+                 self.__dict__['des_vel_' + dof].sin(1))
             plug(self.__dict__['unit_vector_' + dof].sout,
                  self.__dict__['des_vel_' + dof].sin2)
 
@@ -221,17 +221,17 @@ class CircularCartesianTrajectoryGenerator(object):
         #
         # position
         self.des_pos_xy = Add_of_vector(self.prefix + 'des_pos_xy')
-        plug(self.des_pos_x.sout, self.des_pos_xy.sin1)
+        plug(self.des_pos_x.sout, self.des_pos_xy.sin(1))
         plug(self.des_pos_y.sout, self.des_pos_xy.sin2)
         self.des_pos = Add_of_vector(self.prefix + 'des_pos')
-        plug(self.des_pos_xy.sout, self.des_pos.sin1)
+        plug(self.des_pos_xy.sout, self.des_pos.sin(1))
         plug(self.des_pos_z.sout, self.des_pos.sin2)
         # velocity
         self.des_vel_xy = Add_of_vector(self.prefix + 'des_vel_xy')
-        plug(self.des_vel_x.sout, self.des_vel_xy.sin1)
+        plug(self.des_vel_x.sout, self.des_vel_xy.sin(1))
         plug(self.des_vel_y.sout, self.des_vel_xy.sin2)
         self.des_vel = Add_of_vector(self.prefix + 'des_vel')
-        plug(self.des_vel_xy.sout, self.des_vel.sin1)
+        plug(self.des_vel_xy.sout, self.des_vel.sin(1))
         plug(self.des_vel_z.sout, self.des_vel.sin2)
 
     def set_time_period(self, time_period):

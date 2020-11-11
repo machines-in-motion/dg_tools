@@ -12,9 +12,10 @@ impedance_controller
 # Imports
 #
 from dynamic_graph import plug
-from dynamic_graph.sot.core.math_small_entities import (
-    VectorConstant,
-    MatrixConstant,
+
+from dynamic_graph.sot.core.vector_constant import VectorConstant
+from dynamic_graph.sot.core.matrix_constant import MatrixConstant
+from dynamic_graph.sot.core.operator import (
     Add_of_double,
     Add_of_vector,
     Multiply_double_vector,
