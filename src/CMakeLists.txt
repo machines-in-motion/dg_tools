@@ -14,7 +14,6 @@ set(cpp_source_files
   data/upsampler.cpp
   data/previous_value.cpp
   data/memory_replay.cpp
-  data/memory_replay.cpp
   operator.cpp
   smooth_reach.cpp
 )
@@ -27,6 +26,7 @@ target_include_directories(
 # Dependencies.
 target_link_libraries(${lib_name} dynamic-graph::dynamic-graph)
 target_link_libraries(${lib_name} dynamic-graph-python::dynamic-graph-python)
+target_link_libraries(${lib_name} sot-core::sot-core)
 target_link_libraries(${lib_name} Eigen3::Eigen)
 target_link_libraries(${lib_name} eigen-quadprog::eigen-quadprog)
 # Install the plugin python bindings.

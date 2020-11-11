@@ -32,6 +32,7 @@ find_package(ament_cmake_python REQUIRED)
 find_package(mpi_cmake_modules REQUIRED)
 find_package(dynamic-graph REQUIRED)
 find_package(dynamic-graph-python REQUIRED)
+find_package(sot-core REQUIRED)
 find_package(yaml_utils REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(eigen-quadprog REQUIRED)
@@ -43,7 +44,7 @@ find_package(eigen-quadprog REQUIRED)
 ament_export_interfaces(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 # Export de dependencies.
 ament_export_dependencies(mpi_cmake_modules dynamic-graph dynamic-graph-python
-                          Eigen3 eigen-quadprog)
+                          Eigen3 eigen-quadprog sot-core)
 
 
 #
