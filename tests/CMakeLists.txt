@@ -24,13 +24,4 @@ create_dg_tools_unittest(${PROJECT_NAME}_entities)
 
 # Python unit-tests.
 find_package(ament_cmake_nose REQUIRED)
-# find all python tests.
-file(
-  GLOB py_tests
-  RELATIVE ${PROJECT_SOURCE_DIR}/tests
-  tests/test_*.py)
-# Create a test for each one of them.
-foreach(py_test ${py_tests})
-    get_filename_component(test_name ${py_test} NAME_WE)
-    ament_add_nose_test(${PROJECT_NAME}_${py_test} tests/${py_test})
-endforeach()
+ament_add_nose_test(test_python_${PROJECT_NAME} .)

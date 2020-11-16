@@ -27,6 +27,7 @@ target_include_directories(
 target_link_libraries(${lib_name} dynamic-graph::dynamic-graph)
 target_link_libraries(${lib_name} dynamic-graph-python::dynamic-graph-python)
 target_link_libraries(${lib_name} sot-core::sot-core)
+target_link_libraries(${lib_name} pinocchio::pinocchio)
 target_link_libraries(${lib_name} Eigen3::Eigen)
 target_link_libraries(${lib_name} eigen-quadprog::eigen-quadprog)
 # Install the plugin python bindings.

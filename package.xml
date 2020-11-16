@@ -28,6 +28,7 @@
     <depend>dynamic-graph</depend>
     <depend>dynamic-graph-python</depend>
     <depend>sot-core</depend>
+    <depend>pinocchio</depend>
     <depend>yaml_utils</depend>
     <depend>Eigen3</depend>
     <depend>eigen-quadprog</depend>

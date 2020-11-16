@@ -18,12 +18,13 @@ import rospkg
 
 from numbers import Number
 
-from dg_tools.dynamic_graph.dg_tools_entities  import (
+from dg_tools.dynamic_graph.dg_tools_entities import (
     PoseQuaternionToPoseRPY,
     Division_of_double,
-    Sinus as Sinus
+    Sinus as Sinus,
 )
 
+import dynamic_graph
 from dynamic_graph import plug
 from dynamic_graph.sot.core.operator import *
 from dynamic_graph.sot.core.math_small_entities import *
@@ -34,26 +35,34 @@ from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 
 ################### Plug helper #############################################
 
-# To track down implemenation bugs faster, check the arguments to `dg.plug` are
-# actual signals. If not, raise an error.
+# To track down implementation bugs faster, check the arguments to
+# `dynamic_graph.plug` are actual signals. If not, raise an error.
 #
 # SEE: https://github.com/stack-of-tasks/dynamic-graph-python/issues/36
 
-plug_ = dg.plug
+plug_ = dynamic_graph.plug
+
+
 def dg_plug_dbg(sig0, sig1):
     def assert_signal(sig):
-        if not isinstance(sig, dg.signal_base.SignalBase):
+        if not isinstance(sig, dynamic_graph.signal_base.SignalBase):
             raise ValueError(
-                'dynamic_graph.plug(): Passed in value is not a signal. sig=' +
-                str(sig), sig)
+                "dynamic_graph.plug(): Passed in value is not a signal. sig="
+                + str(sig),
+                sig,
+            )
+
     assert_signal(sig0)
     assert_signal(sig1)
     plug_(sig0, sig1)
-dg.plug = dg_plug_dbg
+
+
+dynamic_graph.plug = dg_plug_dbg
 
 ################### Initialisers #############################################
 
-def constDouble(val, entityName='', with_entity=False):
+
+def constDouble(val, entityName="", with_entity=False):
     """Creates a constant double value operator.
 
     Args:
@@ -64,34 +73,44 @@ def constDouble(val, entityName='', with_entity=False):
     """
     sig = Add_of_double(entityName)
     sig.sin1.value = val
-    sig.sin2.value = 0.
+    sig.sin2.value = 0.0
     if with_entity:
         return sig.sout, sig
     else:
         return sig.sout
 
-def constVector(val, entityName=''):
+
+def constVector(val, entityName=""):
     """
     ## This function initialises an constant vector
     ## Input : array (python list)
     """
     op = VectorConstant(entityName).sout
-    op.value = list(val)
+    op.value = val
     return op
 
-def constVectorOp(val, entityName=''):
-    """Initializes a constant vector and returns the output signals as well as op.
-    """
+
+def constVectorOp(val, entityName=""):
+    """Initializes a constant vector and returns the output signals as well as op."""
     op = Multiply_double_vector(entityName)
-    op.sin1.value = 1.
-    op.sin2.value = list(val)
+    op.sin1.value = 1.0
+    op.sin2.value = val
     return op.sin2, op.sout
+
 
 def vectorIdentity(vec1, vec_size, entityName):
     """Entity to label a vector signal."""
     add = Add_of_vector(entityName)
-    plug(vec1, add.signal('sin1'))
-    plug(constVector(vec_size * [0.,]), add.signal('sin2'))
+    plug(vec1, add.signal("sin1"))
+    plug(
+        constVector(
+            vec_size
+            * [
+                0.0,
+            ]
+        ),
+        add.signal("sin2"),
+    )
     return VectorSignal(add.sout, vec_size)
 
 
@@ -104,13 +123,16 @@ def constMatrix(val, entityName):
     op.value = val
     return op
 
+
 ################### OperatorSignals #############################################
 
 import six
 from dynamic_graph.signal_base import objectToString, SignalBase
+
+
 class BaseOperatorSignal(SignalBase):
     def __init__(self, sig):
-        super(BaseOperatorSignal, self).__init__(obj=sig.obj)
+        super(BaseOperatorSignal, self).__init__()
 
     def _op(self, other, op_name, op_maps):
         # TODO: If given other=signal, try to implicity convert to OperatorSignal
@@ -119,39 +141,40 @@ class BaseOperatorSignal(SignalBase):
 
         for k, v in six.iteritems(op_maps):
             if isinstance(other, k):
-                op = v['op']('')
-                if 'value' in v:
-                    op.signal(v['sinB']).value = other
+                op = v["op"]("")
+                if "value" in v:
+                    op.signal(v["sinB"]).value = other
                 else:
-                    dg.plug(other, op.signal(v['sinB']))
-                dg.plug(self, op.signal(v['sinA']))
-                return v['return_wrap'](self, op, other)
+                    dynamic_graph.plug(other, op.signal(v["sinB"]))
+                dynamic_graph.plug(self, op.signal(v["sinA"]))
+                return v["return_wrap"](self, op, other)
 
         raise ValueError('Unsupported "%s" operation with "%s"' % (op_name, str(other)))
 
     def _identity(self, entity_name):
-        raise Exception('Identity operator not defined for this OperatorSignal type');
+        raise Exception("Identity operator not defined for this OperatorSignal type")
 
     def name_entity(self, entity_name):
         return self._identity(entity_name)
 
     def __add__(self, other):
-        return self._op(other, '__add__', self._add)
+        return self._op(other, "__add__", self._add)
 
     def __mul__(self, other):
-        return self._op(other, '__mul__', self._mul)
+        return self._op(other, "__mul__", self._mul)
 
     def __sub__(self, other):
-        return self._op(other, '__sub__', self._sub)
+        return self._op(other, "__sub__", self._sub)
 
     def __div__(self, other):
         return self.__truediv__(other)
 
     def __truediv__(self, other):
-        return self._op(other, '__truediv__', self._truediv)
+        return self._op(other, "__truediv__", self._truediv)
 
     def __repr__(self):
-        return type(self).__name__ + ': value=' + str(self.value)
+        return type(self).__name__ + ": value=" + str(self.value)
+
 
 def opdef(op, return_wrap, use_value=False, use_sin1=True):
     """Creates a definition for how to use the operator.
@@ -162,46 +185,57 @@ def opdef(op, return_wrap, use_value=False, use_sin1=True):
       use_value: (optional) If provided, put the `other` as value
       use_sin1: If True, uses `sin1` and `sin2`, if False use `sin0`
           and `sin1` for the operator.
-      """
-    d = {
-        'op': op,
-        'return_wrap': return_wrap
-    }
+    """
+    d = {"op": op, "return_wrap": return_wrap}
     if use_value:
-        d['value'] = True
+        d["value"] = True
     if use_sin1:
-        d['sinA'] = 'sin1'
-        d['sinB'] = 'sin2'
+        d["sinA"] = "sin1"
+        d["sinB"] = "sin2"
     else:
-        d['sinA'] = 'sin0'
-        d['sinB'] = 'sin1'
+        d["sinA"] = "sin0"
+        d["sinB"] = "sin1"
     return d
+
 
 class VectorSignal(BaseOperatorSignal):
     def __init__(self, sig, length=None):
-        if isinstance(sig, list) or isinstance(sig, tuple) or isinstance(sig, np.ndarray):
+        if (
+            isinstance(sig, list)
+            or isinstance(sig, tuple)
+            or isinstance(sig, np.ndarray)
+        ):
             if length is None:
                 length = len(sig)
             if len(sig) != length:
-                raise ValueError('VectorSignal: Length wrong for provided vector.')
+                raise ValueError("VectorSignal: Length wrong for provided vector.")
             sig = constVector(sig)
 
         if length is None:
-            raise ValueError('VectorSignal: Need to provide length of vector signal.')
+            raise ValueError("VectorSignal: Need to provide length of vector signal.")
 
         super(VectorSignal, self).__init__(sig)
         self.length = length
 
         self._mul = {
-            VectorSignal: opdef(Multiply_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length), use_sin1=False)
+            VectorSignal: opdef(
+                Multiply_of_vector,
+                lambda s, op, other: VectorSignal(op.sout, s.length),
+                use_sin1=False,
+            )
         }
 
         self._add = {
-            VectorSignal: opdef(Add_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length))
+            VectorSignal: opdef(
+                Add_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length)
+            )
         }
 
         self._sub = {
-            VectorSignal: opdef(Substract_of_vector, lambda s, op, other: VectorSignal(op.sout, s.length))
+            VectorSignal: opdef(
+                Substract_of_vector,
+                lambda s, op, other: VectorSignal(op.sout, s.length),
+            )
         }
 
     def _identity(self, entity_name):
@@ -210,27 +244,40 @@ class VectorSignal(BaseOperatorSignal):
     def __getitem__(self, val):
         if isinstance(val, slice):
             if val.step != 1 and val.step != None:
-                raise ValueError('VectorSignal.__getitem__: Only support slice with step 1.')
+                raise ValueError(
+                    "VectorSignal.__getitem__: Only support slice with step 1."
+                )
             if val.start < 0 or val.start > self.length:
-                raise ValueError('VectorSignal.__getitem__: Slice start index "%s" out of range' % (str(val.start)))
+                raise ValueError(
+                    'VectorSignal.__getitem__: Slice start index "%s" out of range'
+                    % (str(val.start))
+                )
             if val.stop < 0 or val.stop > self.length:
-                raise ValueError('VectorSignal.__getitem__: Slice stop index "%s" out of range.' % (str(val.start)))
+                raise ValueError(
+                    'VectorSignal.__getitem__: Slice stop index "%s" out of range.'
+                    % (str(val.start))
+                )
 
-            op = Selec_of_vector('')
+            op = Selec_of_vector("")
             op.selec(val.start, val.stop)
-            dg.plug(self, op.sin)
+            dynamic_graph.plug(self, op.sin)
             return VectorSignal(op.sout, val.stop - val.start)
         elif isinstance(val, int):
-            op = Component_of_vector('')
+            op = Component_of_vector("")
             op.setIndex(val)
             plug(self, op.sin)
             return DoubleSignal(op.sout)
 
-        raise ValueError('VectorSignal.__getitem__: Unsupported item type "%s"' % (str(val)))
+        raise ValueError(
+            'VectorSignal.__getitem__: Unsupported item type "%s"' % (str(val))
+        )
 
     def concat(self, other):
         if not isinstance(other, VectorSignal):
-            raise ValueError('VectorSignal.concat(other): Expecting `other` to be of type VectorSignal but got "%s".' % str(other))
+            raise ValueError(
+                'VectorSignal.concat(other): Expecting `other` to be of type VectorSignal but got "%s".'
+                % str(other)
+            )
 
         op = Stack_of_vector("")
         op.selec1(0, self.length)
@@ -250,33 +297,38 @@ class DoubleSignal(BaseOperatorSignal):
 
         self._add = {
             float: opdef(Add_of_double, return_wrap, use_value=True),
-            DoubleSignal: opdef(Add_of_double, return_wrap)
+            DoubleSignal: opdef(Add_of_double, return_wrap),
         }
 
         self._sub = {
             float: opdef(Substract_of_double, return_wrap, use_value=True),
-            DoubleSignal: opdef(Substract_of_double, return_wrap)
+            DoubleSignal: opdef(Substract_of_double, return_wrap),
         }
 
         self._mul = {
-            float: opdef(Multiply_of_double, return_wrap, use_value=True, use_sin1=False),
+            float: opdef(
+                Multiply_of_double, return_wrap, use_value=True, use_sin1=False
+            ),
             DoubleSignal: opdef(Multiply_of_double, return_wrap, use_sin1=False),
-            VectorSignal: opdef(Multiply_double_vector, lambda s, op, other: VectorSignal(op.sout, other.length))
+            VectorSignal: opdef(
+                Multiply_double_vector,
+                lambda s, op, other: VectorSignal(op.sout, other.length),
+            ),
         }
 
         self._truediv = {
             float: opdef(Division_of_double, return_wrap, use_value=True),
-            DoubleSignal: opdef(Division_of_double, return_wrap)
+            DoubleSignal: opdef(Division_of_double, return_wrap),
         }
 
     def vector(self):
-        return self * VectorSignal([1.])
+        return self * VectorSignal([1.0])
 
 
 #################### Operators ################################################
 
 
-def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=''):
+def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=""):
     """
     ## This function stacks two vectors
     ## Input : Constant vector (not numpy arrays)
@@ -287,12 +339,12 @@ def stack_two_vectors(vec1, vec2, vec1_size, vec2_size, entityName=''):
     op = Stack_of_vector(entityName)
     op.selec1(0, vec1_size)
     op.selec2(0, vec2_size)
-    plug(vec1, op.signal('sin1'))
-    plug(vec2, op.signal('sin2'))
-    return op.signal('sout')
+    plug(vec1, op.signal("sin1"))
+    plug(vec2, op.signal("sin2"))
+    return op.signal("sout")
 
 
-def stack_zero(vec, entityName=''):
+def stack_zero(vec, entityName=""):
     """
     ## This function stacks a zeros before the vector
     ## Input : Constant vector (not numpy arrays)
@@ -301,7 +353,7 @@ def stack_zero(vec, entityName=''):
           : size of first vector (int)
     """
     zero = VectorConstant("zero")
-    zero.sout.value = (0.,)
+    zero.sout.value = np.array([0.0])
 
     op = Stack_of_vector(entityName)
     op.selec1(0, 1)
@@ -311,7 +363,7 @@ def stack_zero(vec, entityName=''):
     return op.sout
 
 
-def selec_vector(vec, start_index, end_index, entityName=''):
+def selec_vector(vec, start_index, end_index, entityName=""):
     """
     ## This function selects a part of the input vector (slices vector)
     ## Input : Constant vector (not numpy array)
@@ -321,7 +373,7 @@ def selec_vector(vec, start_index, end_index, entityName=''):
     """
     op = Selec_of_vector(entityName)
     op.selec(start_index, end_index)
-    plug(vec, op.signal('sin'))
+    plug(vec, op.signal("sin"))
     return op.sout
 
 
@@ -337,7 +389,7 @@ def component_of_vector(vector, index, entityName):
     return comp_of_vect.sout
 
 
-def sinus_double(db1, entityName=''):
+def sinus_double(db1, entityName=""):
     op = Sinus(entityName)
     plug(db1, op.sin)
     return op.sout
@@ -358,29 +410,29 @@ def add_doub_doub(db1, db2, entityName):
     return add
 
 
-def add_vec_vec(vec1, vec2, entityName=''):
+def add_vec_vec(vec1, vec2, entityName=""):
     """
     ## This function adds two Vectors
     ## Input : Constant vectors (not numpy arrays)
     """
     add = Add_of_vector(entityName)
-    plug(vec1, add.signal('sin1'))
-    plug(vec2, add.signal('sin2'))
+    plug(vec1, add.sin(0))
+    plug(vec2, add.sin(1))
     return add.sout
 
 
-def subtract_vec_vec(pos1, pos2, entityName=''):
+def subtract_vec_vec(pos1, pos2, entityName=""):
     """
     ## This function subtracts two Vectors
     ## Input : Constant vectors (not numpy arrays)
     """
     sub_op = Substract_of_vector(entityName)
-    plug(pos1, sub_op.signal('sin1'))
-    plug(pos2, sub_op.signal('sin2'))
+    plug(pos1, sub_op.sin1)
+    plug(pos2, sub_op.sin2)
     return sub_op.sout
 
 
-def transpose_mat(mat, entityName=''):
+def transpose_mat(mat, entityName=""):
     """
     ## This function transposes a matrix
     ## Input : Constant matrix (not numpy arrays)
@@ -390,19 +442,19 @@ def transpose_mat(mat, entityName=''):
     return op.sout
 
 
-def multiply_mat_vec(mat,vec, entityName=''):
+def multiply_mat_vec(mat, vec, entityName=""):
     """
     ## This function multiplies a matrix and vector
     ## Input : Constant matrix (not numpy arrays)
              : Constant vector (not numpy array)
     """
     mat_mul = Multiply_matrix_vector(entityName)
-    plug(mat, mat_mul.signal('sin1'))
-    plug(vec, mat_mul.signal('sin2'))
+    plug(mat, mat_mul.signal("sin1"))
+    plug(vec, mat_mul.signal("sin2"))
     return mat_mul.sout
 
 
-def mul_double_vec(doub, vec, entityName=''):
+def mul_double_vec(doub, vec, entityName=""):
     """
     ## This function multiplies a double and vector
     ## Input : Double value or signal
@@ -413,7 +465,7 @@ def mul_double_vec(doub, vec, entityName=''):
         mul.sin1.value = doub
     else:
         plug(doub, mul.sin1)
-    plug(vec, mul.signal('sin2'))
+    plug(vec, mul.signal("sin2"))
     return mul.sout
 
 
@@ -428,23 +480,24 @@ def mul_vec_vec(vec1, vec2, entityName):
     return vec_mul.sout
 
 
-def div_doub_doub(db1, db2, entityName=''):
+def div_doub_doub(db1, db2, entityName=""):
     div = Division_of_double(entityName)
     plug(db1, div.sin1)
     plug(db2, div.sin2)
     return div.sout
 
+
 ######################### Robotics operators ##################################
 
 
-def hom2pos(robot_joint_signal, entityName=''):
+def hom2pos(robot_joint_signal, entityName=""):
     """
     ## This function transforms a homogenous matrix to xyz cordinate
     ## Input : robot (DynamicPinocchio model) joint signal
     """
     conv_pos = MatrixHomoToPose(entityName)
-    plug(robot_joint_signal, conv_pos.signal('sin'))
-    return conv_pos.signal('sout')
+    plug(robot_joint_signal, conv_pos.signal("sin"))
+    return conv_pos.signal("sout")
 
 
 def convert_quat_se3(quat, entityName):
@@ -454,11 +507,11 @@ def convert_quat_se3(quat, entityName):
     """
 
     quat_to_se3 = QuaternionToMatrix(entityName)
-    plug(quat, quat_to_se3.signal('sin'))
-    return quat_to_se3.signal('sout')
+    plug(quat, quat_to_se3.signal("sin"))
+    return quat_to_se3.signal("sout")
 
 
-def basePoseQuat2PoseRPY(q_base, entityName=''):
+def basePoseQuat2PoseRPY(q_base, entityName=""):
     op = PoseQuaternionToPoseRPY(entityName)
     plug(q_base, op.sin)
     return op.sout

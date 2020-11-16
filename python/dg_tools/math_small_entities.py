@@ -11,8 +11,10 @@ impedance_controller
 #
 # Imports
 #
+import numpy as np
 from dynamic_graph import plug
 
+from dynamic_graph.sot.core.double_constant import DoubleConstant
 from dynamic_graph.sot.core.vector_constant import VectorConstant
 from dynamic_graph.sot.core.matrix_constant import MatrixConstant
 from dynamic_graph.sot.core.operator import (
@@ -100,7 +102,10 @@ class ConstantVector(object):
         self.sout = self.vec.sout
 
     def set_vec(self, vec):
-        self.vec.sout.value = vec
+        if isinstance(vec, list):
+            self.vec.sout.value = np.array(vec)
+        else:
+            self.vec.sout.value = vec
 
     def get_vec(self):
         return self.vec.sout.value
@@ -135,19 +140,16 @@ class ConstantDouble(object):
 
     def __init__(self, value, entity_name=""):
         # create a "double + double"
-        self.add = Add_of_double(entity_name)
+        self.double = DoubleConstant(entity_name)
         # initialize both value to 0.0
-        self.add.sin1.value = value
-        self.add.sin2.value = 0.0
-        # the input signal is in fact the sin1, so "sout = sin1 + 0.0"
-        self.sin = self.add.sin1
-        self.sout = self.add.sout
+        self.double.set(0.0)
+        self.sout = self.double.sout
 
     def set_value(self, value):
-        self.add.sin1.value = value
+        self.double.set(value)
 
     def get_value(self):
-        return self.add.sin1.value
+        return self.double.sout.value
 
 
 """
@@ -237,11 +239,10 @@ class Add2Vectors(object):
 
     def __init__(self, vector_sin1, vector_sin2, entity_name=''):
         self.op = Add_of_vector(entity_name)
-        self.sin1 = self.op.sin1
-        self.sin2 = self.op.sin2
+        self.sin = self.op.sin
         self.sout = self.op.sout
-        plug(vector_sin1, self.op.sin1)
-        plug(vector_sin2, self.op.sin2)
+        plug(vector_sin1, self.op.sin(0))
+        plug(vector_sin2, self.op.sin(1))
 
 
 def add_vec_vec(vec1, vec2, entityName=''):

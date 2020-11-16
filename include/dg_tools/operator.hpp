@@ -63,6 +63,24 @@ namespace dg_tools {
   };
 
   /**
+   * @brief Converts PoseRPY into PoseQuaternion data.
+   */
+  class Operator_EXPORTS PoseRPYToPoseQuaternion: public dg::Entity
+  {
+    public:
+
+      PoseRPYToPoseQuaternion( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> data_inputSIN;
+      dg::SignalTimeDependent<dg::Vector,int> data_outSOUT;
+
+      dg::Vector& data_out_callback(dg::Vector& history, int time);
+  };
+
+  /**
    * @brief Given input data x, compute y = sin(x).
    */
   class Operator_EXPORTS Sinus: public dg::Entity

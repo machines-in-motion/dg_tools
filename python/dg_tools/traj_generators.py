@@ -29,11 +29,8 @@ from .math_small_entities import (
 
 
 # For making gain input dynamic through terminal
-add_pi = Add_of_double('pi')
-add_pi.sin(0).value = 0
-# Change this value for different gains
-add_pi.sin(1).value = np.pi/2.0
-pi = add_pi.sout
+half_pi_entity = ConstantDouble(np.pi * 0.5, 'half_pi')
+half_pi = half_pi_entity.sout
 
 ###############################################################################
 
@@ -183,20 +180,22 @@ class CircularCartesianTrajectoryGenerator(object):
                 self.prefix + 'osc_vel_phase_' + dof)
             self.pi_by_2 = ConstantDouble(np.pi * 0.5, self.prefix + 'pi_by_2')
             plug(self.pi_by_2.sout,
-                 self.__dict__['osc_vel_phase_' + dof].sin(1))
+                 self.__dict__['osc_vel_phase_' + dof].sin(0))
             plug(self.__dict__['osc_pos_' + dof].phase,
-                 self.__dict__['osc_vel_phase_' + dof].sin2)
+                 self.__dict__['osc_vel_phase_' + dof].sin(1))
             plug(self.__dict__['osc_vel_phase_' + dof].sout,
                  self.__dict__['osc_vel_' + dof].phase)
             # bias
             self.__dict__['osc_vel_' + dof].bias.value = 0.0
+            # set as activated
+            self.__dict__['osc_vel_' + dof].setActivated(True)
 
         #
         # Create the reference cartesian position and velocity
         #
         for i, dof in enumerate(['x', 'y', 'z']):
             # create a unit vector for each dof
-            unit_vector = [0.0]*6
+            unit_vector = np.array([0.0]*6)
             unit_vector[i] = 1.0
             self.__dict__['unit_vector_' + dof] = ConstantVector(
                 unit_vector, self.prefix + 'unit_vector_' + dof)
@@ -205,14 +204,14 @@ class CircularCartesianTrajectoryGenerator(object):
             self.__dict__['des_pos_' + dof] = Multiply_double_vector(
                 self.prefix + 'des_pos_' + dof)
             plug(self.__dict__['osc_pos_' + dof].sout,
-                 self.__dict__['des_pos_' + dof].sin(1))
+                 self.__dict__['des_pos_' + dof].sin1)
             plug(self.__dict__['unit_vector_' + dof].sout,
                  self.__dict__['des_pos_' + dof].sin2)
             # velocity
             self.__dict__['des_vel_' + dof] = Multiply_double_vector(
                 self.prefix + 'des_vel_' + dof)
             plug(self.__dict__['osc_vel_' + dof].sout,
-                 self.__dict__['des_vel_' + dof].sin(1))
+                 self.__dict__['des_vel_' + dof].sin1)
             plug(self.__dict__['unit_vector_' + dof].sout,
                  self.__dict__['des_vel_' + dof].sin2)
 
@@ -221,18 +220,18 @@ class CircularCartesianTrajectoryGenerator(object):
         #
         # position
         self.des_pos_xy = Add_of_vector(self.prefix + 'des_pos_xy')
-        plug(self.des_pos_x.sout, self.des_pos_xy.sin(1))
-        plug(self.des_pos_y.sout, self.des_pos_xy.sin2)
+        plug(self.des_pos_x.sout, self.des_pos_xy.sin(0))
+        plug(self.des_pos_y.sout, self.des_pos_xy.sin(1))
         self.des_pos = Add_of_vector(self.prefix + 'des_pos')
-        plug(self.des_pos_xy.sout, self.des_pos.sin(1))
-        plug(self.des_pos_z.sout, self.des_pos.sin2)
+        plug(self.des_pos_xy.sout, self.des_pos.sin(0))
+        plug(self.des_pos_z.sout, self.des_pos.sin(1))
         # velocity
         self.des_vel_xy = Add_of_vector(self.prefix + 'des_vel_xy')
-        plug(self.des_vel_x.sout, self.des_vel_xy.sin(1))
-        plug(self.des_vel_y.sout, self.des_vel_xy.sin2)
+        plug(self.des_vel_x.sout, self.des_vel_xy.sin(0))
+        plug(self.des_vel_y.sout, self.des_vel_xy.sin(1))
         self.des_vel = Add_of_vector(self.prefix + 'des_vel')
-        plug(self.des_vel_xy.sout, self.des_vel.sin(1))
-        plug(self.des_vel_z.sout, self.des_vel.sin2)
+        plug(self.des_vel_xy.sout, self.des_vel.sin(0))
+        plug(self.des_vel_z.sout, self.des_vel.sin(1))
 
     def set_time_period(self, time_period):
         """

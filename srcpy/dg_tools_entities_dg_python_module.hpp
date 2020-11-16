@@ -30,6 +30,7 @@ typedef boost::mpl::vector<dynamicgraph::sot::ComImpedanceControl,
                            dynamicgraph::sot::PowerJumpControl,
                            dg_tools::Division_of_double,
                            dg_tools::PoseQuaternionToPoseRPY,
+                           dg_tools::PoseRPYToPoseQuaternion,
                            dg_tools::Sinus,
                            dg_tools::VectorIntegrator,
                            dynamicgraph::sot::SmoothReach>
