@@ -34,14 +34,15 @@ if __name__ == "__main__":
 
     # Filter a noisy signal.
     T = 0.05
-    nsamples = T * fs
+    nsamples = int(T * fs)
     t = np.linspace(0, T, nsamples, endpoint=False)
-    a = 0.02
+    a = [0.1, 0.01, 0.02, 0.03]
+    
     f0 = 600.0
-    x = 0.1 * np.sin(2 * np.pi * 1.2 * np.sqrt(t))
-    x += 0.01 * np.cos(2 * np.pi * 312 * t + 0.1)
-    x += a * np.cos(2 * np.pi * f0 * t + .11)
-    x += 0.03 * np.cos(2 * np.pi * 2000 * t)
+    x = a[0] * np.sin(2 * np.pi * 1.2 * np.sqrt(t))
+    x += a[1] * np.cos(2 * np.pi * 312 * t + 0.1)
+    x += a[2] * np.cos(2 * np.pi * f0 * t + .11)
+    x += a[3] * np.cos(2 * np.pi * 2000 * t)
 
     plt.figure(1)
     plt.clf()
@@ -49,17 +50,13 @@ if __name__ == "__main__":
 
     y = []
     for i in range(x.size):
-        my_filter.sin.value = [x[i]]
-        print (my_filter.sin.value, " ",)
+        my_filter.sin.value = np.array([x[i]])
         my_filter.sout.recompute(i)
-        y += my_filter.sout.value
-
-    print (x)
-    print (y)
+        y += [my_filter.sout.value]
 
     plt.plot(t, y, label='Filtered signal (%g Hz)' % f0)
     plt.xlabel('time (seconds)')
-    plt.hlines([-a, a], 0, T, linestyles='--')
+    plt.hlines([-np.sum(a), np.sum(a)], 0, T, linestyles='--')
     plt.grid(True)
     plt.axis('tight')
     plt.legend(loc='upper left')

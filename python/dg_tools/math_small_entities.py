@@ -133,16 +133,14 @@ def matrixConstant(val):
 
 class ConstantDouble(object):
     """
-    Fake an entity which provide a constant double
-
-    The idea is to create a "sout = sin1 + 0.0", hence a constant double
+    Wrapper around the double constant entity.
     """
 
     def __init__(self, value, entity_name=""):
         # create a "double + double"
         self.double = DoubleConstant(entity_name)
         # initialize both value to 0.0
-        self.double.set(0.0)
+        self.set_value(value)
         self.sout = self.double.sout
 
     def set_value(self, value):

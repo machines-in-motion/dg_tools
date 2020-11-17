@@ -219,19 +219,23 @@ class CircularCartesianTrajectoryGenerator(object):
         # Finalize by summing up the 3 cartesian positions and velocities
         #
         # position
-        self.des_pos_xy = Add_of_vector(self.prefix + 'des_pos_xy')
-        plug(self.des_pos_x.sout, self.des_pos_xy.sin(0))
-        plug(self.des_pos_y.sout, self.des_pos_xy.sin(1))
-        self.des_pos = Add_of_vector(self.prefix + 'des_pos')
-        plug(self.des_pos_xy.sout, self.des_pos.sin(0))
-        plug(self.des_pos_z.sout, self.des_pos.sin(1))
+        self.add_des_pos_xy = Add_of_vector(self.prefix + 'add_des_pos_xy')
+        plug(self.des_pos_x.sout, self.add_des_pos_xy.sin(0))
+        plug(self.des_pos_y.sout, self.add_des_pos_xy.sin(1))
+        self.add_des_pos = Add_of_vector(self.prefix + 'add_des_pos')
+        plug(self.add_des_pos_xy.sout, self.add_des_pos.sin(0))
+        plug(self.des_pos_z.sout, self.add_des_pos.sin(1))
         # velocity
-        self.des_vel_xy = Add_of_vector(self.prefix + 'des_vel_xy')
-        plug(self.des_vel_x.sout, self.des_vel_xy.sin(0))
-        plug(self.des_vel_y.sout, self.des_vel_xy.sin(1))
-        self.des_vel = Add_of_vector(self.prefix + 'des_vel')
-        plug(self.des_vel_xy.sout, self.des_vel.sin(0))
-        plug(self.des_vel_z.sout, self.des_vel.sin(1))
+        self.add_des_vel_xy = Add_of_vector(self.prefix + 'add_des_vel_xy')
+        plug(self.des_vel_x.sout, self.add_des_vel_xy.sin(0))
+        plug(self.des_vel_y.sout, self.add_des_vel_xy.sin(1))
+        self.add_des_vel = Add_of_vector(self.prefix + 'add_des_vel')
+        plug(self.add_des_vel_xy.sout, self.add_des_vel.sin(0))
+        plug(self.des_vel_z.sout, self.add_des_vel.sin(1))
+
+        # output signals
+        self.des_pos = self.add_des_pos.sout
+        self.des_vel = self.add_des_vel.sout
 
     def set_time_period(self, time_period):
         """
@@ -252,10 +256,9 @@ class CircularCartesianTrajectoryGenerator(object):
 
     def trace(self, robot):
         for dof in ['x', 'y', 'z']:
-            robot.add_trace(self.prefix + 'unit_vector_' + dof, 'sout')
             robot.add_trace(self.prefix + "osc_pos_" + dof, 'sout')
-        robot.add_trace(self.prefix + 'des_pos', 'sout')
-        robot.add_trace(self.prefix + 'des_vel', 'sout')
+        robot.add_trace(self.prefix + 'add_des_pos', 'sout')
+        robot.add_trace(self.prefix + 'add_des_vel', 'sout')
 
 
 def cubic_interpolator(init_vector_signal, goal_vector_signal, entityName):
