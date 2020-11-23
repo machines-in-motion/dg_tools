@@ -26,10 +26,10 @@ class TestPreviousValue(unittest.TestCase):
         z = []
         for i in range(5000):
             time.append(i * dt)
-            entity.des_pos_xy.sout.recompute(i)
-            x.append(entity.des_pos_xy.sout.value[0])
-            y.append(entity.des_pos_xy.sout.value[1])
-            z.append(entity.des_pos_xy.sout.value[2])
+            entity.des_pos.recompute(i)
+            x.append(entity.des_pos.value[0])
+            y.append(entity.des_pos.value[1])
+            z.append(entity.des_pos.value[2])
 
         self.assertEqual(x, y)
         self.assertEqual(y, z)
@@ -56,10 +56,10 @@ class TestPreviousValue(unittest.TestCase):
         z = []
         for i in range(5000):
             time.append(i * dt)
-            entity.des_pos_xy.sout.recompute(i)
-            x.append(entity.des_pos_xy.sout.value[0])
-            y.append(entity.des_pos_xy.sout.value[1])
-            z.append(entity.des_pos_xy.sout.value[2])
+            entity.des_pos.recompute(i)
+            x.append(entity.des_pos.value[0])
+            y.append(entity.des_pos.value[1])
+            z.append(entity.des_pos.value[2])
 
         self.assertEqual(x, y)
         self.assertEqual(y, z)
