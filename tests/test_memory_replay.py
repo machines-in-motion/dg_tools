@@ -1,12 +1,11 @@
 import unittest
 import numpy as np
 
-from dynamic_graph_manager.dg_tools import MemoryReplay
+from dg_tools.dynamic_graph.dg_tools_entities  import MemoryReplay
 
 class TestMemoryReplay(unittest.TestCase):
     def test_basic(self):
         a = np.random.rand(2, 3)
-        a = tuple([tuple(b) for b in a])
         entity = MemoryReplay('')
 
         # Init from the matrix.

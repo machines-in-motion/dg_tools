@@ -15,8 +15,6 @@ class TestButterWorthFilter(unittest.TestCase):
         # Sample rate and desired cutoff frequencies (in Hz).
         order = 6
         fs = 5000.0
-        lowcut = 600.0
-        nyq = 0.5 * fs
         sampling_time = 1./fs
         nyq_cutoff_perc = 0.24 # Keep 24% of the nyq frequency of the data
 
@@ -27,8 +25,8 @@ class TestButterWorthFilter(unittest.TestCase):
 
         # Filter a noisy signal.
         T = 0.05
-        nsamples = T * fs
-        t = np.linspace(0, T, nsamples, endpoint=False)
+        nsamples = int(T * fs)
+        t = np.linspace(0.0, T, nsamples, endpoint=False)
         a = 0.02
         f0 = 600.0
         x = 0.1 * np.sin(2 * np.pi * 1.2 * np.sqrt(t))
@@ -38,13 +36,14 @@ class TestButterWorthFilter(unittest.TestCase):
 
         y = []
         for i in range(x.size):
-            my_filter.sin.value = [x[i]]
+            my_filter.sin.value = np.array([x[i]])
             my_filter.sout.recompute(i)
-            y += my_filter.sout.value
+            y.append(float(my_filter.sout.value))
 
         y = np.array(y)
         y_result = TestButterWorthFilter.y_result()
-        self.assertTrue(np.allclose(y, y_result))
+
+        np.testing.assert_array_almost_equal(y, y_result, decimal=5)
 
     @staticmethod
     def y_result():

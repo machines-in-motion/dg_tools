@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from dynamic_graph_manager.dg_tools import Upsampler
+from dg_tools.dynamic_graph.dg_tools_entities  import Upsampler
 
 class TestUpsampler(unittest.TestCase):
     def test_init(self):
@@ -13,17 +13,17 @@ class TestUpsampler(unittest.TestCase):
 
         # Setting the input value and calling the first time the output.
         # This should set the initial offset for the upsampling.
-        entity.sin.value = [1, 2]
+        entity.sin.value = np.array([1, 2])
         entity.sout.recompute(2)
 
         # Change the value, the upsampler should keep the last value
         # sampled at t=2.
-        entity.sin.value = [2, 3]
+        entity.sin.value = np.array([2, 3])
         for i in range(2, 7):
             entity.sout.recompute(i) # 2, 3, 4, 5, 6
             np.testing.assert_array_almost_equal(entity.sout.value, [1, 2])
 
         # At t=7, the value should get updated
-        entity.sin.value = [3, 4]
+        entity.sin.value = np.array([3, 4])
         entity.sout.recompute(7)
         np.testing.assert_array_almost_equal(entity.sout.value, [3, 4])

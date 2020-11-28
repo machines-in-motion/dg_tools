@@ -13,7 +13,7 @@
 from dg_tools.utils import *
 from dg_tools.traj_generators import mul_double_vec_2
 
-from py_robot_properties_teststand.config import TeststandConfig
+from robot_properties_teststand.config import TeststandConfig
 import dynamic_graph.sot.dynamic_pinocchio as dp
 
 
@@ -31,9 +31,10 @@ class LegImpedanceController():
             'jac_cnt_' + self.leg_name, 'contact')
         self.robot_dg.createPosition('pos_hip_' + self.leg_name, 'HFE')
         self.robot_dg.createPosition('pos_foot_' + self.leg_name, 'END')
+        self.robot_dg.add_signals()
 
         print("Warning: Robot acceleration has been set to zero")
-        self.robot_dg.acceleration.value = 3 * (0.0, )
+        self.robot_dg.acceleration.value = np.array(3* [0.0])
 
         self.joint_positions_sin = self.robot_dg.position
         self.joint_velocities_sin = self.robot_dg.velocity
@@ -71,7 +72,7 @@ class LegImpedanceController():
         self.rel_pos_foot = subtract_vec_vec(
             self.xyzpos_foot, self.xyzpos_hip, "rel_pos_foot_" + self.leg_name)
         self.rel_pos_foot = stack_two_vectors(self.rel_pos_foot, constVector(
-            [0.0, 0.0, 0.0], 'stack_to_wrench_' + self.leg_name), 3, 3)
+            np.array([0.0, 0.0, 0.0]), 'stack_to_wrench_' + self.leg_name), 3, 3)
         return self.rel_pos_foot
 
     def return_control_torques(self, kp, des_pos, kd=None, des_vel=None, kf=None, fff=None):
@@ -99,8 +100,8 @@ class LegImpedanceController():
         self.pos_error = subtract_vec_vec(
             self.rel_pos_foot, des_pos, "pos_error_" + self.leg_name)
         mul_kp_gains_split = Multiply_of_vector("kp_split_" + self.leg_name)
-        plug(kp, mul_kp_gains_split.sin0)
-        plug(self.pos_error, mul_kp_gains_split.sin1)
+        plug(kp, mul_kp_gains_split.sin(0))
+        plug(self.pos_error, mul_kp_gains_split.sin(1))
         pos_error_with_gains = mul_kp_gains_split.sout
 
         if kd is not None and des_vel is not None:
@@ -111,8 +112,8 @@ class LegImpedanceController():
                 self.rel_vel_foot, des_vel, "vel_error_" + self.leg_name)
             mul_kd_gains_split = Multiply_of_vector(
                 "kd_split_" + self.leg_name)
-            plug(kd, mul_kd_gains_split.sin0)
-            plug(self.vel_error, mul_kd_gains_split.sin1)
+            plug(kd, mul_kd_gains_split.sin(0))
+            plug(self.vel_error, mul_kd_gains_split.sin(1))
             vel_error_with_gains = mul_kd_gains_split.sout
 
             self.pd_error = add_vec_vec(

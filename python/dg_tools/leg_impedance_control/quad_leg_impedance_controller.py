@@ -15,7 +15,7 @@ from dg_tools.traj_generators import mul_double_vec_2
 from dg_tools.leg_impedance_control.leg_impedance_controller import LegImpedanceController
 
 # from dynamic_graph_manager.vicon_sdk import ViconClientEntity
-from dynamic_graph_manager.dg_tools import ComImpedanceControl
+from dg_tools.dynamic_graph.dg_tools_entities  import ComImpedanceControl
 from dynamic_graph.sot.core.switch import SwitchVector
 
 ###############################################################################

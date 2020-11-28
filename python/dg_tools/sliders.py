@@ -8,7 +8,7 @@
 @brief This file contains dynamic graph tools specific to the robot Solo
 """
 
-
+import numpy as np
 import string
 from dynamic_graph import plug
 from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
@@ -52,7 +52,8 @@ class Sliders(object):
                 list(string.ascii_uppercase[:nb_sliders])):
             # names
             slider_name = "slider_" + slider_letter
-            slider_component = slider_name + "_Component_of_vector"
+            slider_component = slider_name + "_component_of_vector_sout"
+            slider_sel_vec_sout = slider_name + "_elec_of_vector_sout"
             slider_sel_vec = slider_name + "_selec_of_vector"
             slider_scale = slider_name + "_scale"
             slider_offset = slider_name + "_offset"
@@ -69,8 +70,8 @@ class Sliders(object):
                 self.prefix + slider_offset)
             # sin1 - sin2
             plug(self.__dict__[slider_sel_vec].sout,
-                 self.__dict__[slider_offset].sin1)
-            self.__dict__[slider_offset].sin2.value = [0.0]
+                 self.__dict__[slider_offset].sin(0))
+            self.__dict__[slider_offset].sin(1).value = np.array([0.0])
 
             # Scale the slider
             self.__dict__[slider_scale] = Multiply_double_vector(
@@ -86,6 +87,13 @@ class Sliders(object):
             plug(self.__dict__[slider_scale].sout,
                  self.__dict__[slider_component].sin)
 
+            # Get the slider as a vector
+            self.__dict__[slider_sel_vec_sout] = Selec_of_vector(
+                self.prefix + slider_sel_vec_sout)
+            self.__dict__[slider_sel_vec_sout].selec(0, 1)
+            plug(self.__dict__[slider_scale].sout,
+                 self.__dict__[slider_sel_vec_sout].sin)
+
             # create some shortcut
             class Slider(object):
                 """
@@ -95,8 +103,8 @@ class Sliders(object):
             self.__dict__[slider_name] = Slider()
             self.__dict__[slider_name].double = self.__dict__[slider_component]
             self.__dict__[slider_name].vector = self.__dict__[slider_scale]
-            self.__dict__[slider_letter] = DoubleSignal(self.__dict__[slider_component].sout)
-            self.__dict__[slider_letter + "_vec"] = VectorSignal(self.__dict__[slider_scale].sout, 1)
+            self.__dict__[slider_letter] = self.__dict__[slider_component].sout
+            self.__dict__[slider_letter + "_vec"] = self.__dict__[slider_sel_vec_sout].sout
 
 
     def set_scale_values(self, scale_values):
@@ -121,15 +129,14 @@ class Sliders(object):
             slider_name = "slider_" + slider_letter
             slider_offset = slider_name + "_offset"
             # set the offset
-            self.__dict__[slider_offset].sin2.value = [offset]
+            self.__dict__[slider_offset].sin(1).value = [offset]
 
     def plug_slider_signal(self, slider_positions_sig):
         plug(slider_positions_sig, self.sin)
 
     def trace(self, robot):
         robot.add_trace(self.sliders_filtered.name, "x_filtered")
-        for i, slider_letter in enumerate(
-                list(string.ascii_uppercase[:self.nb_sliders])):
+        for slider_letter in list(string.ascii_uppercase[:self.nb_sliders]):
             # names
             slider_name = "slider_" + slider_letter
             slider_component = slider_name + "_Component_of_vector"

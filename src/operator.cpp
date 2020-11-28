@@ -11,16 +11,16 @@
 #include <sot/core/debug.hh>
 #include <dynamic-graph/factory.h>
 #include <dynamic-graph/all-commands.h>
-
+#include "pinocchio/math/rpy.hpp"
 #include <iostream>
 
 using namespace dg_tools;
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PoseQuaternionToPoseRPY, "PoseQuaternionToPoseRPY");
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PoseQuaternionToPoseRPY, "PoseQuaternionToPoseRPY");
 
 PoseQuaternionToPoseRPY::PoseQuaternionToPoseRPY( const std::string & name )
  :Entity(name)
@@ -32,10 +32,6 @@ PoseQuaternionToPoseRPY::PoseQuaternionToPoseRPY( const std::string & name )
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
 }
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
 dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time)
 {
     const dg::Vector& input = data_inputSIN(time);
@@ -43,15 +39,46 @@ dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time
 
     out.resize(6);
     out.head<3>() = input.head<3>();
-    out.tail<3>() = quat.toRotationMatrix().eulerAngles(2, 1, 0).reverse();
+    out.tail<3>() = pinocchio::rpy::matrixToRpy(quat.toRotationMatrix());
     return out;
 }
 
-DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Sinus, "Sinus");
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(PoseRPYToPoseQuaternion, "PoseRPYToPoseQuaternion");
+
+PoseRPYToPoseQuaternion::PoseRPYToPoseQuaternion( const std::string & name )
+ :Entity(name)
+ ,data_inputSIN(NULL,"PoseRPYToPoseQuaternion("+name+")::input(vector)::sin")
+ ,data_outSOUT( boost::bind(&PoseRPYToPoseQuaternion::data_out_callback,this,_1,_2),
+         data_inputSIN,
+        "PoseRPYToPoseQuaternion("+name+")::output(vector)::sout" )
+{
+  Entity::signalRegistration(data_inputSIN << data_outSOUT);
+}
+
+dg::Vector& PoseRPYToPoseQuaternion::data_out_callback(dg::Vector& out, int time)
+{
+    const dg::Vector& input = data_inputSIN(time);
+    Eigen::Quaterniond q = Eigen::AngleAxisd(input(5), Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(input(4), Eigen::Vector3d::UnitY()) *
+                           Eigen::AngleAxisd(input(3), Eigen::Vector3d::UnitX());
+    out.resize(7);
+    out.head<3>() = input.head<3>();
+    out(3) = q.x();
+    out(4) = q.y();
+    out(5) = q.z();
+    out(6) = q.w();
+    return out;
+}
 
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Sinus, "Sinus");
 
 Sinus::Sinus( const std::string & name )
  :Entity(name)
@@ -63,22 +90,17 @@ Sinus::Sinus( const std::string & name )
   Entity::signalRegistration(data_inputSIN << data_outSOUT);
 }
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
 double& Sinus::data_out_callback(double& out, int time)
 {
     out = sin(data_inputSIN.access(time));
     return out;
 }
 
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Division_of_double, "Division_of_double");
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 Division_of_double::Division_of_double( const std::string & name )
  :Entity(name)
@@ -91,23 +113,17 @@ Division_of_double::Division_of_double( const std::string & name )
   Entity::signalRegistration(data_input1SIN << data_input2SIN << data_outSOUT);
 }
 
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
 double& Division_of_double::data_out_callback(double& out, int time)
 {
     out = data_input1SIN.access(time) / data_input2SIN.access(time);
     return out;
 }
 
-
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(VectorIntegrator, "VectorIntegrator");
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 VectorIntegrator::VectorIntegrator( const std::string & name )
  :Entity(name)
@@ -122,10 +138,6 @@ VectorIntegrator::VectorIntegrator( const std::string & name )
   data_outSOUT.setDependencyType(
         dynamicgraph::TimeDependency<int>::ALWAYS_READY);
 }
-
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
 
 dg::Vector& VectorIntegrator::data_out_callback(dg::Vector& out, int time)
 {
