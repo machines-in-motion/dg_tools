@@ -43,7 +43,7 @@ namespace dynamicgraph{
 
       public: /*------ init --------*/
 
-        void init( const double& step){};
+        void init( const double& /*step*/){};
 
       public: /*------ CONSTANTS --------*/
 

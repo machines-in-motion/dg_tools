@@ -16,6 +16,7 @@ set(cpp_source_files
   data/memory_replay.cpp
   operator.cpp
   smooth_reach.cpp
+  se3_offset.cpp
 )
 
 add_library(${lib_name} SHARED ${cpp_source_files})

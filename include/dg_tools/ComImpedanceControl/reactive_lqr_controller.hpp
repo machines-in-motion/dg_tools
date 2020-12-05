@@ -38,7 +38,7 @@ namespace dynamicgraph{
 
         ReactiveLQRController( const std::string &name);
 
-        void init (const double& step){};
+        void init (const double& /*step*/){};
 
       public: /*----------------- Constant ----------------------------------*/
 

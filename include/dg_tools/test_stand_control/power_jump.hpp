@@ -36,7 +36,7 @@ namespace dynamicgraph{
     public:
 
       static const double TIME_STEP_DEFAULT;
-      void init( const double& step){};
+      void init( const double& /*step*/){};
 
 
     public: /* ----- ENTITY INHERITANCE -----*/
