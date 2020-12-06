@@ -16,7 +16,6 @@
 #include "dg_tools/data/previous_value.hpp"
 #include "dg_tools/data/upsampler.hpp"
 #include "dg_tools/operator.hpp"
-#include "dg_tools/se3_offset.hpp"
 #include "dg_tools/smooth-reach.hh"
 #include "dg_tools/test_stand_control/power_jump.hpp"
 
@@ -33,7 +32,6 @@ typedef boost::mpl::vector<dynamicgraph::sot::ComImpedanceControl,
                            dg_tools::PoseRPYToPoseQuaternion,
                            dg_tools::Sinus,
                            dg_tools::VectorIntegrator,
-                           dg_tools::SE3Offset,
                            dynamicgraph::sot::SmoothReach,
                            dynamicgraph::sot::PowerJumpControl>
     entities_t;
