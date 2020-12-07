@@ -11,6 +11,7 @@
 #include "dg_tools/ComImpedanceControl/reactive_lqr_controller.hpp"
 #include "dg_tools/control/calibrator.hpp"
 #include "dg_tools/control/control_pd.hpp"
+#include "dg_tools/create_world_frame.hpp"
 #include "dg_tools/data/history_recorder.hpp"
 #include "dg_tools/data/memory_replay.hpp"
 #include "dg_tools/data/previous_value.hpp"
@@ -23,6 +24,7 @@ typedef boost::mpl::vector<dynamicgraph::sot::ComImpedanceControl,
                            dynamicgraph::sot::ReactiveLQRController,
                            dynamicgraph::sot::Calibrator,
                            dynamicgraph::sot::PDController,
+                           dg_tools::CreateWorldFrame,
                            dg_tools::HistoryRecorder,
                            dg_tools::MemoryReplay,
                            dg_tools::PreviousValue,
