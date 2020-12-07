@@ -4,7 +4,7 @@ import pinocchio
 from dg_tools.dynamic_graph.dg_tools_entities import CreateWorldFrame
 
 
-class TestSE3Offset(unittest.TestCase):
+class TestCreateWorldFrame(unittest.TestCase):
     def test_init(self):
         entity = CreateWorldFrame("se3offset")
         self.assertEqual(entity.name, "se3offset")

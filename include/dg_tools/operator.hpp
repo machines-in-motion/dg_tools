@@ -23,6 +23,7 @@ namespace dg = dynamicgraph;
 
 #include <sot/core/matrix-geometry.hh>
 
+#include <pinocchio/spatial/se3.hpp>
 
 /* --------------------------------------------------------------------- */
 /* --- API ------------------------------------------------------------- */
@@ -138,6 +139,47 @@ namespace dg_tools {
 
       dg::Vector& data_out_callback(dg::Vector& out, int time);
   };
+
+  /**
+   * @brief Given input sin1 (se3 poseQuat) and sin2 (a vector to apply it,
+   * xyzquat or 6d), compute y = sin1.act(sin2).
+   */
+  class Operator_EXPORTS Multiply_poseQuaternion_vector: public dg::Entity
+  {
+    public:
+
+      Multiply_poseQuaternion_vector( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> sin1_;
+      dg::SignalPtr<dg::Vector,int> sin2_;
+      dg::SignalTimeDependent<dg::Vector,int> sout_;
+
+      dg::Vector& data_out_callback(dg::Vector& out, int time);
+  };
+
+  /**
+   * @brief Given input sin1 (se3 poseQuat) and sin2 (a vector to apply it,
+   * xyzquat or 6d), compute y = sin1.actInv(sin2).
+   */
+  class Operator_EXPORTS MultiplyInv_poseQuaternion_vector: public dg::Entity
+  {
+    public:
+
+      MultiplyInv_poseQuaternion_vector( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> sin1_;
+      dg::SignalPtr<dg::Vector,int> sin2_;
+      dg::SignalTimeDependent<dg::Vector,int> sout_;
+
+      dg::Vector& data_out_callback(dg::Vector& out, int time);
+  };
+
 
 } // namespace dg_tools
 

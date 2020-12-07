@@ -6,6 +6,8 @@ from dynamic_graph import plug
 from dg_tools.dynamic_graph.dg_tools_entities import (
     PoseQuaternionToPoseRPY,
     PoseRPYToPoseQuaternion,
+    Multiply_poseQuaternion_vector,
+    MultiplyInv_poseQuaternion_vector
 )
 
 
@@ -72,3 +74,35 @@ class TestPoseQuaternionToPoseRPY(unittest.TestCase):
 
         # Testing
         np.testing.assert_allclose(init_se3_pose_quat, final_se3_pose_quat, rtol=1e-4)
+
+    def test_xyzquat_operator(self):
+        # Setup
+
+        mul = Multiply_poseQuaternion_vector("mul")
+        mul_inv = MultiplyInv_poseQuaternion_vector("mul_inv")
+
+        # Create a Random SE3 object.
+        xyzq_rand = pinocchio.SE3ToXYZQUAT(pinocchio.SE3.Random())
+        xyzq_out = pinocchio.SE3ToXYZQUAT(pinocchio.SE3.Random())
+        
+        # 
+        mul.sin1.value = xyzq_rand
+        mul.sin2.value = xyzq_out
+        #
+        mul_inv.sin1.value = xyzq_rand
+        plug(mul.sout, mul_inv.sin2)
+        #
+        mul_inv.sout.recompute(1)
+        out = mul_inv.sout.value
+
+        # debug print
+        print()
+        print ("mul.sin1.value =" , mul.sin1.value)
+        print ("mul.sin2.value =" , mul.sin2.value)
+        print ("mul.sout.value =" , mul.sout.value)
+        print ("mul_inv.sin1.value =" , mul_inv.sin1.value)
+        print ("mul_inv.sin2.value =" , mul_inv.sin2.value)
+        print ("mul_inv.sout.value =" , mul_inv.sout.value)
+
+        # Testing
+        np.testing.assert_allclose(out, xyzq_out, rtol=1e-4)
