@@ -8,10 +8,10 @@
 @brief This file contains dynamic graph tools specific to the robot Solo
 """
 
+from pinocchio.utils import zero
 import numpy as np
 import string
 from dynamic_graph import plug
-from dynamic_graph.sot.core.fir_filter import FIRFilter_Vector_double
 from dynamic_graph.sot.core.math_small_entities import (
     Component_of_vector,
     Selec_of_vector,
@@ -53,7 +53,7 @@ class Sliders(object):
             # names
             slider_name = "slider_" + slider_letter
             slider_component = slider_name + "_component_of_vector_sout"
-            slider_sel_vec_sout = slider_name + "_elec_of_vector_sout"
+            slider_sel_vec_sout = slider_name + "_selec_of_vector_sout"
             slider_sel_vec = slider_name + "_selec_of_vector"
             slider_scale = slider_name + "_scale"
             slider_offset = slider_name + "_offset"
@@ -68,6 +68,8 @@ class Sliders(object):
             # offset the slider
             self.__dict__[slider_offset] = Add_of_vector(
                 self.prefix + slider_offset)
+            self.__dict__[slider_offset].setSignalNumber(2)
+
             # sin1 - sin2
             plug(self.__dict__[slider_sel_vec].sout,
                  self.__dict__[slider_offset].sin(0))
@@ -104,8 +106,9 @@ class Sliders(object):
             self.__dict__[slider_name].double = self.__dict__[slider_component]
             self.__dict__[slider_name].vector = self.__dict__[slider_scale]
             self.__dict__[slider_letter] = self.__dict__[slider_component].sout
-            self.__dict__[slider_letter + "_vec"] = self.__dict__[slider_sel_vec_sout].sout
-
+            self.__dict__[slider_letter + "_vec"] = (
+                self.__dict__[slider_sel_vec_sout].sout
+            )
 
     def set_scale_values(self, scale_values):
         assert len(scale_values) == self.nb_sliders
@@ -129,7 +132,9 @@ class Sliders(object):
             slider_name = "slider_" + slider_letter
             slider_offset = slider_name + "_offset"
             # set the offset
-            self.__dict__[slider_offset].sin(1).value = [offset]
+            offset_val = zero(1)
+            offset_val[:] = offset
+            self.__dict__[slider_offset].sin(1).value = offset_val
 
     def plug_slider_signal(self, slider_positions_sig):
         plug(slider_positions_sig, self.sin)
