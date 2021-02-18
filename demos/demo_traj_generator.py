@@ -45,7 +45,6 @@ if __name__ == "__main__":
 
     nsamples = int(duration / time_period)
     t = np.linspace(0, duration, nsamples, endpoint=False)
-    
 
     des_pos = []
     des_vel = []
@@ -65,4 +64,3 @@ if __name__ == "__main__":
     plt.legend(loc="upper left")
 
     plt.show()
-
