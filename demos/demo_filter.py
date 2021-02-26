@@ -19,34 +19,44 @@ from dg_tools.filter import ButterWorthFilter
 
 if __name__ == "__main__":
 
-    my_filter = ButterWorthFilter('butterworth_filter')
+    my_filter = ButterWorthFilter("butterworth_filter")
 
     # Sample rate and desired cutoff frequencies (in Hz).
     order = 6
-    fs = 5000.0
-    lowcut = 600.0
+    fs = 1000.0
     nyq = 0.5 * fs
-    low = lowcut / nyq
+    low = 0.1
+    lowcut = low * nyq
 
-    my_filter.init(1, 1.0/fs, low, order)
+    print("Filter paramters:")
+    print("- order = ", order)
+    print("- fs = ", fs)
+    print("- nyq = ", nyq)
+    print("- low = ", low)
+    print("- lowcut = ", lowcut)
+
+    my_filter.init(1, 1.0 / fs, low, order)
 
     my_filter.update(low, order)
 
+    print("- numerator = ", my_filter.numerator)
+    print("- denominator = ", my_filter.denominator)
+
     # Filter a noisy signal.
-    T = 0.05
+    T = 0.2
     nsamples = int(T * fs)
     t = np.linspace(0, T, nsamples, endpoint=False)
-    a = [0.1, 0.01, 0.02, 0.03]
-    
-    f0 = 600.0
+    a = [0.1, 0.005, 0.004, 0.003]
+
+    f0 = 50.0
     x = a[0] * np.sin(2 * np.pi * 1.2 * np.sqrt(t))
     x += a[1] * np.cos(2 * np.pi * 312 * t + 0.1)
-    x += a[2] * np.cos(2 * np.pi * f0 * t + .11)
+    x += a[2] * np.cos(2 * np.pi * f0 * t + 0.11)
     x += a[3] * np.cos(2 * np.pi * 2000 * t)
 
     plt.figure(1)
     plt.clf()
-    plt.plot(t, x, label='Noisy signal')
+    plt.plot(t, x, label="Noisy signal")
 
     y = []
     for i in range(x.size):
@@ -54,11 +64,11 @@ if __name__ == "__main__":
         my_filter.sout.recompute(i)
         y += [my_filter.sout.value]
 
-    plt.plot(t, y, label='Filtered signal (%g Hz)' % f0)
-    plt.xlabel('time (seconds)')
-    plt.hlines([-np.sum(a), np.sum(a)], 0, T, linestyles='--')
+    plt.plot(t, y, label="Filtered signal (%g Hz)" % f0)
+    plt.xlabel("time (seconds)")
+    # plt.hlines([-np.sum(a), np.sum(a)], 0, T, linestyles='--')
     plt.grid(True)
-    plt.axis('tight')
-    plt.legend(loc='upper left')
+    plt.axis("tight")
+    plt.legend(loc="upper left")
 
     plt.show()
