@@ -520,7 +520,7 @@ def basePoseQuat2PoseRPY(q_base, entityName=""):
 ######################### Standard vectors ####################################
 
 
-def zero_vec(vec_size, entityName):
+def zero_vec(vec_size, entityName=''):
     """
     ## This function creates a zero constvector of vec_size
     ## Input : size of zero vector (int)
