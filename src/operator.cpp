@@ -79,6 +79,33 @@ dg::Vector& PoseRPYToPoseQuaternion::data_out_callback(dg::Vector& out, int time
 /* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(RPYToRotationMatrix, "RPYToRotationMatrix");
+
+RPYToRotationMatrix::RPYToRotationMatrix( const std::string & name )
+ :Entity(name)
+ ,data_inputSIN(NULL,"RPYToRotationMatrix("+name+")::input(vector)::sin")
+ ,data_outSOUT( boost::bind(&RPYToRotationMatrix::data_out_callback,this,_1,_2),
+         data_inputSIN,
+        "RPYToRotationMatrix("+name+")::output(matrix)::sout" )
+{
+  Entity::signalRegistration(data_inputSIN << data_outSOUT);
+}
+
+dg::Matrix& RPYToRotationMatrix::data_out_callback(dg::Matrix& out, int time)
+{
+    const dg::Vector& input = data_inputSIN(time);
+    Eigen::Quaterniond q = Eigen::AngleAxisd(input(2), Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(input(1), Eigen::Vector3d::UnitY()) *
+                           Eigen::AngleAxisd(input(0), Eigen::Vector3d::UnitX());
+    out.resize(3, 3);
+    out = q.toRotationMatrix();
+    return out;
+}
+
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
+
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(Sinus, "Sinus");
 
 Sinus::Sinus( const std::string & name )

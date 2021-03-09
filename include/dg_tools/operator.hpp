@@ -82,6 +82,25 @@ namespace dg_tools {
   };
 
   /**
+   * @brief Converts RPY into rotation matrix.
+   */
+  class Operator_EXPORTS RPYToRotationMatrix: public dg::Entity
+  {
+    public:
+
+      RPYToRotationMatrix( const std::string & name );
+
+      static const std::string CLASS_NAME;
+      virtual const std::string& getClassName( void ) const {return CLASS_NAME;}
+
+      dg::SignalPtr<dg::Vector,int> data_inputSIN;
+      dg::SignalTimeDependent<dg::Matrix,int> data_outSOUT;
+
+      dg::Matrix& data_out_callback(dg::Matrix& history, int time);
+  };
+
+
+  /**
    * @brief Given input data x, compute y = sin(x).
    */
   class Operator_EXPORTS Sinus: public dg::Entity

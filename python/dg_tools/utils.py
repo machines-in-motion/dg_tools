@@ -377,7 +377,7 @@ def selec_vector(vec, start_index, end_index, entityName=""):
     return op.sout
 
 
-def component_of_vector(vector, index, entityName):
+def component_of_vector(vector, index, entityName=''):
     """
     ## This function selects a compnent of the input vector
     ## Input : Constant vector (not numpy array)
