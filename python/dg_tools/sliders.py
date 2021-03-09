@@ -19,7 +19,6 @@ from dynamic_graph.sot.core.math_small_entities import (
     Add_of_vector,
 )
 from dynamic_graph.sot.core.filter_differentiator import FilterDifferentiator
-from dg_tools.utils import VectorSignal, DoubleSignal
 
 
 class Sliders(object):
