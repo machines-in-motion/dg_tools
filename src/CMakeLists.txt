@@ -15,7 +15,6 @@ set(cpp_source_files
   data/previous_value.cpp
   data/memory_replay.cpp
   operator.cpp
-  smooth_reach.cpp
   create_world_frame.cpp
 )
 

@@ -17,7 +17,6 @@
 #include "dg_tools/data/previous_value.hpp"
 #include "dg_tools/data/upsampler.hpp"
 #include "dg_tools/operator.hpp"
-#include "dg_tools/smooth-reach.hh"
 #include "dg_tools/test_stand_control/power_jump.hpp"
 
 typedef boost::mpl::vector<dynamicgraph::sot::ComImpedanceControl,
@@ -37,6 +36,5 @@ typedef boost::mpl::vector<dynamicgraph::sot::ComImpedanceControl,
                            dg_tools::VectorIntegrator,
                            dg_tools::Multiply_poseQuaternion_vector,
                            dg_tools::MultiplyInv_poseQuaternion_vector,
-                           dynamicgraph::sot::SmoothReach,
                            dynamicgraph::sot::PowerJumpControl>
     entities_t;
