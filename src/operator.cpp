@@ -40,6 +40,7 @@ dg::Vector& PoseQuaternionToPoseRPY::data_out_callback(dg::Vector& out, int time
 
     out.resize(6);
     out.head<3>() = input.head<3>();
+    quat.normalize();
     out.tail<3>() = pinocchio::rpy::matrixToRpy(quat.toRotationMatrix());
     return out;
 }
