@@ -3,6 +3,7 @@
  * Julian Viereck
  */
 
+#include "dg_tools/utils.hpp"
 #include "dg_tools/operator.hpp"
 
 /* --------------------------------------------------------------------- */
@@ -209,43 +210,29 @@ Multiply_poseQuaternion_vector::Multiply_poseQuaternion_vector(
 dg::Vector& Multiply_poseQuaternion_vector::data_out_callback(
     dg::Vector& out, int time)
 {
-    const dg::Vector& xyzquat = sin1_.access(time);
-    const dg::Vector& vector = sin2_.access(time);
+    const dg::Vector& xyzquat_in1 = sin1_.access(time);
+    const dg::Vector& vector_in2 = sin2_.access(time);
 
     // convert the xyzquat into a pinocchio::SE3 object
-    pinocchio::SE3 se3_in1;
-    {
-        se3_in1.translation() = xyzquat.head<3>();
-        Eigen::Map<const pinocchio::SE3::Quaternion> q(xyzquat.tail<4>().data());
-        se3_in1.rotation() = q.matrix();
-    }
+    pinocchio::SE3 se3_in1 = xyzquat_to_se3(xyzquat_in1);
 
-    if(vector.size() == 6)
+    if(vector_in2.size() == 6)
     {
         if(out.size() != 6)
         {
             out.setZero(6);
         }
-        out = se3_in1.toActionMatrix() * vector;
+        out = se3_in1.toActionMatrix() * vector_in2;
     }
-    else if(vector.size() == 7)
+    else if(vector_in2.size() == 7)
     {
         if(out.size() != 7)
         {
             out.setZero(7);
         }
-        pinocchio::SE3 se3_out;
-        {
-            Eigen::Map<const pinocchio::SE3::Quaternion> q(vector.tail<4>().data());
-            pinocchio::SE3 se3_in2(q.matrix(), vector.head<3>());
-            se3_out = se3_in1.act(se3_in2);
-        }
-        out.head<3>() = se3_out.translation();
-        Eigen::Quaterniond quaternion = Eigen::Quaterniond(se3_out.rotation());
-        out(3) = quaternion.x();
-        out(4) = quaternion.y();
-        out(5) = quaternion.z();
-        out(6) = quaternion.w();
+        pinocchio::SE3 se3_in2 = xyzquat_to_se3(vector_in2);
+        pinocchio::SE3 se3_out = se3_in1.act(se3_in2);
+        out = se3_to_xyzquat(se3_out);
     }
     return out;
 }
@@ -275,43 +262,29 @@ MultiplyInv_poseQuaternion_vector::MultiplyInv_poseQuaternion_vector(
 dg::Vector& MultiplyInv_poseQuaternion_vector::data_out_callback(
     dg::Vector& out, int time)
 {
-    const dg::Vector& xyzquat = sin1_.access(time);
-    const dg::Vector& vector = sin2_.access(time);
+    const dg::Vector& xyzquat_in1 = sin1_.access(time);
+    const dg::Vector& vector_in2 = sin2_.access(time);
 
     // convert the xyzquat into a pinocchio::SE3 object
-    pinocchio::SE3 se3_in1;
-    {
-        se3_in1.translation() = xyzquat.head<3>();
-        Eigen::Map<const pinocchio::SE3::Quaternion> q(xyzquat.tail<4>().data());
-        se3_in1.rotation() = q.matrix();
-    }
+    pinocchio::SE3 se3_in1 = xyzquat_to_se3(xyzquat_in1);
 
-    if(vector.size() == 6)
+    if(vector_in2.size() == 6)
     {
         if(out.size() != 6)
         {
             out.setZero(6);
         }
-        out = se3_in1.toActionMatrixInverse() * vector;
+        out = se3_in1.toActionMatrixInverse() * vector_in2;
     }
-    else if(vector.size() == 7)
+    else if(vector_in2.size() == 7)
     {
         if(out.size() != 7)
         {
             out.setZero(7);
         }
-        pinocchio::SE3 se3_out;
-        {
-            Eigen::Map<const pinocchio::SE3::Quaternion> q(vector.tail<4>().data());
-            pinocchio::SE3 se3_in2(q.matrix(), vector.head<3>());
-            se3_out = se3_in1.actInv(se3_in2);
-        }
-        out.head<3>() = se3_out.translation();
-        Eigen::Quaterniond quaternion = Eigen::Quaterniond(se3_out.rotation());
-        out(3) = quaternion.x();
-        out(4) = quaternion.y();
-        out(5) = quaternion.z();
-        out(6) = quaternion.w();
+        pinocchio::SE3 se3_in2 = xyzquat_to_se3(vector_in2);
+        pinocchio::SE3 se3_out = se3_in1.actInv(se3_in2);
+        out = se3_to_xyzquat(se3_out);
     }
     return out;
 }

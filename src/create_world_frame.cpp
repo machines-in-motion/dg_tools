@@ -103,6 +103,7 @@ dynamicgraph::Vector& CreateWorldFrame::output_callback(
         quaternion_.y() = offset_value(4);
         quaternion_.z() = offset_value(5);
         quaternion_.w() = offset_value(6);
+        quaternion_.normalize();
         rpy_ = pinocchio::rpy::matrixToRpy(quaternion_.toRotationMatrix());
         rpy_ = rpy_.array() * which_dofs_.tail<3>().array();
 
