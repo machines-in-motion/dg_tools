@@ -193,6 +193,9 @@ class Sliders(object):
             offset_val[:] = offset
             self.__dict__[slider_offset].sin(1).value = offset_val
 
+    def zero_slider(self):
+        self.set_offset_values(-self.sin.value)
+
     def plug_slider_signal(self, slider_positions_sig):
         plug(slider_positions_sig, self.sin)
 
